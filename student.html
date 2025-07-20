@@ -73,6 +73,16 @@
       border-radius: 50%;
       border: 2px solid #1e40af;
     }
+    .strengthTag {
+      font-weight: bold;
+      padding: 4px 8px;
+      border-radius: 6px;
+      color: white;
+      margin-left: 10px;
+    }
+    .strong { background: green; }
+    .moderate { background: orange; }
+    .weak { background: red; }
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
@@ -154,6 +164,7 @@
     auth.onAuthStateChanged(user => {
       if (user) {
         document.getElementById("userEmail").innerText = user.email;
+
         db.ref('calls').on('value', snap => {
           const calls = snap.val();
           const list = document.getElementById("callList");
@@ -176,7 +187,8 @@
           if (data) {
             Object.entries(data).forEach(([subject, tests]) => {
               const avg = tests.reduce((a,b) => a + b, 0) / tests.length;
-              container.innerHTML += `<p><strong>${subject}</strong>: ${avg.toFixed(1)}% (${avg > 75 ? '🟢 Strong' : avg > 50 ? '🟡 Moderate' : '🔴 Weak'})</p>`;
+              let tag = avg > 75 ? '<span class="strengthTag strong">Strong</span>' : avg > 50 ? '<span class="strengthTag moderate">Moderate</span>' : '<span class="strengthTag weak">Needs Work</span>';
+              container.innerHTML += `<p><strong>${subject}</strong>: ${avg.toFixed(1)}% ${tag}</p>`;
             });
           } else {
             container.innerText = 'No test scores available yet.';
