@@ -1,137 +1,101 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Student - Join Call</title>
+  <meta charset="UTF-8" />
+  <title>Student Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #f3f4f6;
+    }
+    header {
+      background-color: #1e40af;
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+    .container {
+      padding: 30px;
+      max-width: 800px;
+      margin: auto;
+    }
+    .callCard {
+      background: white;
+      padding: 20px;
+      margin: 15px 0;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .callCard h3 {
+      margin: 0;
+    }
+    .callCard button {
+      margin-top: 10px;
+      background-color: #10b981;
+      border: none;
+      padding: 10px 16px;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .callCard button:hover {
+      background-color: #059669;
+    }
+  </style>
 </head>
 <body>
-  <h1>Student Video Calls</h1>
-  <div id="callList">Loading available calls...</div>
-  <div id="videos"></div>
-
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <header>
+    <h1>📚 Student Video Calls</h1>
+  </header>
+  <div class="container">
+    <div id="callsContainer">
+      <p>Loading available calls...</p>
+    </div>
+  </div>
 
   <script>
-    // Your Firebase config here (same as teacher)
-  const firebaseConfig = {
-    apiKey: "AIzaSyAHSxenlPZD8veD-iZ6pJIOVRbuTD2dw0Q",
-    authDomain: "learn-3f43b.firebaseapp.com",
-    databaseURL: "https://learn-3f43b-default-rtdb.firebaseio.com",
-    projectId: "learn-3f43b",
-    storageBucket: "learn-3f43b.firebasestorage.app",
-    messagingSenderId: "54412751232",
-    appId: "1:54412751232:web:31fe8e2f8b5cc03d409165",
-    measurementId: "G-7HRKXL1EPS"
-  };
+    const firebaseConfig = {
+      apiKey: "AIzaSyAHSxenlPZD8veD-iZ6pJIOVRbuTD2dw0Q",
+      authDomain: "learn-3f43b.firebaseapp.com",
+      databaseURL: "https://learn-3f43b-default-rtdb.firebaseio.com",
+      projectId: "learn-3f43b",
+      storageBucket: "learn-3f43b.appspot.com",
+      messagingSenderId: "54412751232",
+      appId: "1:54412751232:web:31fe8e2f8b5cc03d409165"
+    };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const callListDiv = document.getElementById('callList');
-    const videosDiv = document.getElementById('videos');
+    const container = document.getElementById("callsContainer");
 
-    let localStream = null;
-    let peerConnection = null;
-    let currentCallId = null;
-
-    // Show live calls
-    db.ref('calls').on('value', snapshot => {
-      const calls = snapshot.val();
-      callListDiv.innerHTML = '';
-
-      if (!calls) {
-        callListDiv.innerText = "No active calls right now.";
+    db.ref("calls").on("value", snap => {
+      const data = snap.val();
+      container.innerHTML = "";
+      if (!data) {
+        container.innerHTML = "<p>No video calls currently available.</p>";
         return;
       }
 
-      Object.entries(calls).forEach(([callId, call]) => {
-        const callDiv = document.createElement('div');
-        callDiv.style.border = '1px solid black';
-        callDiv.style.margin = '5px';
-        callDiv.style.padding = '5px';
-
-        callDiv.innerHTML = `
-          <p><strong>Live Call by ${call.by}</strong></p>
-          <button>Join Call</button>
+      Object.entries(data).forEach(([id, call]) => {
+        const div = document.createElement("div");
+        div.className = "callCard";
+        div.innerHTML = `
+          <h3>${call.className}</h3>
+          <p>Teacher: <strong>${call.teacher}</strong></p>
+          <button onclick="joinCall('${id}')">Join Call</button>
         `;
-
-        callDiv.querySelector('button').onclick = () => {
-          joinCall(callId);
-        };
-
-        callListDiv.appendChild(callDiv);
+        container.appendChild(div);
       });
     });
 
-    function addVideoStream(name, stream) {
-      const container = document.createElement('div');
-      container.style.border = '1px solid black';
-      container.style.margin = '5px';
-      container.style.padding = '5px';
-
-      const label = document.createElement('p');
-      label.innerText = name;
-
-      const video = document.createElement('video');
-      video.autoplay = true;
-      video.playsInline = true;
-      video.srcObject = stream;
-
-      container.appendChild(label);
-      container.appendChild(video);
-      videosDiv.appendChild(container);
-    }
-
-    async function joinCall(callId) {
-      if (peerConnection) {
-        alert('Already in a call!');
-        return;
-      }
-
-      currentCallId = callId;
-      peerConnection = new RTCPeerConnection();
-
-      try {
-        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        addVideoStream("Me (Student)", localStream);
-        localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-      } catch (e) {
-        alert('Could not get camera/mic: ' + e.message);
-        return;
-      }
-
-      peerConnection.ontrack = (event) => {
-        addVideoStream("Teacher", event.streams[0]);
-      };
-
-      peerConnection.onicecandidate = event => {
-        if (event.candidate) {
-          db.ref(`calls/${currentCallId}/iceCandidates/student/teacher`).push(event.candidate.toJSON());
-        }
-      };
-
-      // Listen for offer from teacher
-      db.ref(`calls/${currentCallId}/offers/student`).on('value', async snapshot => {
-        if (!snapshot.exists()) return;
-        const offer = snapshot.val();
-        await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-
-        const answer = await peerConnection.createAnswer();
-        await peerConnection.setLocalDescription(answer);
-
-        // Send answer back
-        await db.ref(`calls/${currentCallId}/answers/student`).set(answer.toJSON());
-      });
-
-      // Listen for ICE candidates from teacher
-      db.ref(`calls/${currentCallId}/iceCandidates/teacher/student`).on('child_added', snapshot => {
-        const candidate = new RTCIceCandidate(snapshot.val());
-        peerConnection.addIceCandidate(candidate).catch(console.error);
-      });
-
-      // Add student as participant
-      await db.ref(`calls/${currentCallId}/participants/student`).set(true);
-
-      callListDiv.style.display = 'none';  // Hide call list after joining
+    function joinCall(callId) {
+      window.location.href = `video.html?callId=${callId}`;
     }
   </script>
 </body>
