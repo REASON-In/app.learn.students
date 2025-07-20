@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Student Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      margin: 0;
+      background: linear-gradient(120deg, #89f7fe, #66a6ff);
+      color: #333;
+    }
+    header {
+      background-color: #004080;
+      color: white;
+      padding: 1rem 2rem;
+      text-align: center;
+      font-size: 1.5rem;
+    }
+    .container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.5rem;
+      padding: 2rem;
+    }
+    .card {
+      background: white;
+      border-radius: 15px;
+      padding: 1.5rem;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    }
+    .card h2 {
+      margin-top: 0;
+      font-size: 1.2rem;
+      color: #004080;
+    }
+    .profile-pic {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid #004080;
+      margin-bottom: 10px;
+    }
+    input[type="file"] {
+      margin-top: 10px;
+    }
+    .chat-box, .ai-box {
+      height: 200px;
+      overflow-y: auto;
+      border: 1px solid #ccc;
+      padding: 10px;
+      border-radius: 10px;
+    }
+    .subject-bar {
+      background-color: #eee;
+      border-radius: 10px;
+      margin: 5px 0;
+      overflow: hidden;
+    }
+    .subject-bar-inner {
+      height: 20px;
+      color: white;
+      padding-left: 10px;
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  🎓 Student Dashboard
+</header>
+
+<div class="container">
+  <!-- 👤 Profile Section -->
+  <div class="card">
+    <h2>👤 Your Account</h2>
+    <img src="https://via.placeholder.com/80" class="profile-pic" id="avatarPreview" />
+    <br>
+    <input type="file" id="avatarInput" accept="image/*" />
+    <p>Email: <span id="userEmail">student@school.edu</span></p>
+    <button onclick="logout()">Logout</button>
+  </div>
+
+  <!-- 🎥 Video Call Section -->
+  <div class="card">
+    <h2>🎥 Video Call</h2>
+    <p>Join a call started by a teacher:</p>
+    <button onclick="joinCall()">Join Call</button>
+  </div>
+
+  <!-- 💬 Chat with Online Users -->
+  <div class="card">
+    <h2>💬 Chat (1-on-1)</h2>
+    <div class="chat-box" id="onlineUsers">
+      <!-- Online users will appear here -->
+    </div>
+  </div>
+
+  <!-- 🤖 AI Assistant -->
+  <div class="card">
+    <h2>🤖 Ask AI for Help</h2>
+    <input type="text" id="aiQuestion" placeholder="Ask about Math, Science..." style="width: 100%;" />
+    <button onclick="askAI()">Ask</button>
+    <div class="ai-box" id="aiResponse">
+      <!-- AI answers will appear here -->
+    </div>
+  </div>
+
+  <!-- 📚 Subject Tracker -->
+  <div class="card">
+    <h2>📚 Subject Strength</h2>
+    <div class="subject-bar">
+      <div class="subject-bar-inner" style="width: 85%; background: #4caf50;">Math: 85%</div>
+    </div>
+    <div class="subject-bar">
+      <div class="subject-bar-inner" style="width: 70%; background: #2196f3;">Science: 70%</div>
+    </div>
+    <div class="subject-bar">
+      <div class="subject-bar-inner" style="width: 60%; background: #ff9800;">History: 60%</div>
+    </div>
+    <div class="subject-bar">
+      <div class="subject-bar-inner" style="width: 50%; background: #f44336;">Geography: 50%</div>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase and Logic Placeholder -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+  // TODO: Initialize Firebase and connect all sections
+  function joinCall() {
+    alert("Joining teacher's video call... (logic to be added)");
+  }
+
+  function askAI() {
+    const q = document.getElementById("aiQuestion").value;
+    document.getElementById("aiResponse").innerHTML = "Thinking...";
+    setTimeout(() => {
+      document.getElementById("aiResponse").innerHTML = "Here's a helpful answer about: <b>" + q + "</b>";
+    }, 1000);
+  }
+
+  function logout() {
+    alert("Logging out...");
+    // firebase.auth().signOut()...
+  }
+
+  document.getElementById("avatarInput").addEventListener("change", function (e) {
+    const reader = new FileReader();
+    reader.onload = function () {
+      document.getElementById("avatarPreview").src = reader.result;
+    };
+    reader.readAsDataURL(e.target.files[0]);
+  });
+</script>
+</body>
+</html>
