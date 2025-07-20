@@ -2,101 +2,129 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Student Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <title>Student Portal | Grades 9–12</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f7fa;
       margin: 0;
-      background: #f3f4f6;
+      padding: 0;
     }
+
     header {
-      background-color: #1e40af;
+      background: #1e293b;
       color: white;
       padding: 20px;
       text-align: center;
     }
-    .container {
-      padding: 30px;
-      max-width: 800px;
-      margin: auto;
-    }
-    .callCard {
-      background: white;
+
+    .grade-selector {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
       padding: 20px;
-      margin: 15px 0;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      flex-wrap: wrap;
     }
-    .callCard h3 {
-      margin: 0;
-    }
-    .callCard button {
-      margin-top: 10px;
-      background-color: #10b981;
-      border: none;
-      padding: 10px 16px;
+
+    .grade-button {
+      background: #3b82f6;
       color: white;
+      border: none;
+      padding: 10px 20px;
       border-radius: 8px;
       cursor: pointer;
-      font-weight: bold;
+      font-size: 16px;
+      transition: background 0.3s;
     }
-    .callCard button:hover {
-      background-color: #059669;
+
+    .grade-button:hover {
+      background: #2563eb;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      padding: 30px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+      padding: 20px;
+      transition: transform 0.3s;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+    }
+
+    .card h3 {
+      margin-top: 0;
+      color: #1e293b;
+    }
+
+    footer {
+      text-align: center;
+      padding: 15px;
+      background: #1e293b;
+      color: white;
+    }
+
+    @media (max-width: 600px) {
+      .grade-button {
+        font-size: 14px;
+        padding: 8px 16px;
+      }
     }
   </style>
 </head>
 <body>
+
   <header>
-    <h1>📚 Student Video Calls</h1>
+    <h1>Student Portal</h1>
+    <p>For Grades 9 to 12</p>
   </header>
+
+  <div class="grade-selector">
+    <button class="grade-button">Grade 9</button>
+    <button class="grade-button">Grade 10</button>
+    <button class="grade-button">Grade 11</button>
+    <button class="grade-button">Grade 12</button>
+  </div>
+
   <div class="container">
-    <div id="callsContainer">
-      <p>Loading available calls...</p>
+    <div class="card">
+      <h3>📚 Subjects</h3>
+      <p>View your current subjects by grade.</p>
+    </div>
+    <div class="card">
+      <h3>📝 Assignments</h3>
+      <p>Keep track of due dates and submissions.</p>
+    </div>
+    <div class="card">
+      <h3>🧪 Tests</h3>
+      <p>Upcoming tests and previous results.</p>
+    </div>
+    <div class="card">
+      <h3>📊 Progress Tracker</h3>
+      <p>Track your academic progress over time.</p>
+    </div>
+    <div class="card">
+      <h3>📞 Contact Teachers</h3>
+      <p>Reach out to your teachers for help.</p>
+    </div>
+    <div class="card">
+      <h3>🤖 AI Study Assistant</h3>
+      <p>Ask questions and get study help anytime.</p>
     </div>
   </div>
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyAHSxenlPZD8veD-iZ6pJIOVRbuTD2dw0Q",
-      authDomain: "learn-3f43b.firebaseapp.com",
-      databaseURL: "https://learn-3f43b-default-rtdb.firebaseio.com",
-      projectId: "learn-3f43b",
-      storageBucket: "learn-3f43b.appspot.com",
-      messagingSenderId: "54412751232",
-      appId: "1:54412751232:web:31fe8e2f8b5cc03d409165"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+  <footer>
+    &copy; 2025 Student Portal. Built for learners by learners.
+  </footer>
 
-    const container = document.getElementById("callsContainer");
-
-    db.ref("calls").on("value", snap => {
-      const data = snap.val();
-      container.innerHTML = "";
-      if (!data) {
-        container.innerHTML = "<p>No video calls currently available.</p>";
-        return;
-      }
-
-      Object.entries(data).forEach(([id, call]) => {
-        const div = document.createElement("div");
-        div.className = "callCard";
-        div.innerHTML = `
-          <h3>${call.className}</h3>
-          <p>Teacher: <strong>${call.teacher}</strong></p>
-          <button onclick="joinCall('${id}')">Join Call</button>
-        `;
-        container.appendChild(div);
-      });
-    });
-
-    function joinCall(callId) {
-      window.location.href = `video.html?callId=${callId}`;
-    }
-  </script>
 </body>
 </html>
