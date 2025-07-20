@@ -1,31 +1,68 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8" />
-  <title>Video Call</title>
+  <meta charset="UTF-8">
+  <title>Live Video Class</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     body {
-      background: #f1f5f9;
       margin: 0;
-      font-family: Arial, sans-serif;
+      font-family: 'Segoe UI', sans-serif;
+      background: #1e293b;
+      color: white;
+    }
+    #videos {
       display: flex;
       flex-wrap: wrap;
+      gap: 16px;
       justify-content: center;
-      gap: 10px;
       padding: 20px;
     }
-    video {
-      border: 2px solid #1e3a8a;
+    .video-box {
+      background: #0f172a;
       border-radius: 12px;
-      width: 300px;
-      height: 225px;
-      object-fit: cover;
-      background: black;
+      padding: 8px;
+      text-align: center;
     }
+    .video-box video {
+      width: 300px;
+      border-radius: 10px;
+    }
+    .video-box p {
+      margin-top: 4px;
+      font-size: 14px;
+    }
+    #controls {
+      position: fixed;
+      bottom: 20px;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+    }
+    button {
+      padding: 10px 18px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    #muteBtn { background-color: #3b82f6; }
+    #endBtn { background-color: #ef4444; }
   </style>
 </head>
 <body>
-  <video id="localVideo" autoplay muted></video>
+
+  <h2 style="text-align:center; margin-top: 20px;">🔴 Live Class In Session</h2>
+
+  <div id="videos"></div>
+
+  <div id="controls">
+    <button id="muteBtn">Mute</button>
+    <button id="endBtn">End Call</button>
+  </div>
 
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -43,93 +80,122 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const callId = new URLSearchParams(location.search).get('callId');
-    const localId = crypto.randomUUID(); // unique ID for each user
-    const connections = {};
+    const callId = new URLSearchParams(location.search).get("callId");
+    const localVideo = document.createElement("video");
+    localVideo.autoplay = true;
+    localVideo.muted = true;
     let localStream;
+    let isMuted = false;
+    const videosDiv = document.getElementById("videos");
 
-    // Get camera + mic
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-      .then(stream => {
-        localStream = stream;
-        document.getElementById("localVideo").srcObject = stream;
+    const peers = {};
+    const userId = "user_" + Math.floor(Math.random() * 99999);
 
-        // Announce yourself
-        db.ref(`calls/${callId}/users/${localId}`).set(true);
+    async function init() {
+      localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      localVideo.srcObject = localStream;
 
-        // Listen for new users
-        db.ref(`calls/${callId}/users`).on("child_added", snapshot => {
-          const remoteId = snapshot.key;
-          if (remoteId !== localId && !connections[remoteId]) {
-            startConnection(remoteId);
+      const box = document.createElement("div");
+      box.className = "video-box";
+      box.appendChild(localVideo);
+      const nameTag = document.createElement("p");
+      nameTag.innerText = userId + " (You)";
+      box.appendChild(nameTag);
+      videosDiv.appendChild(box);
+
+      const peersRef = db.ref(`calls/${callId}/participants`);
+      peersRef.child(userId).set(true);
+      peersRef.onDisconnect().remove();
+
+      peersRef.on("child_added", async (snapshot) => {
+        const remoteId = snapshot.key;
+        if (remoteId === userId) return;
+
+        const peer = new RTCPeerConnection();
+        localStream.getTracks().forEach(track => peer.addTrack(track, localStream));
+        peers[remoteId] = peer;
+
+        const offer = await peer.createOffer();
+        await peer.setLocalDescription(offer);
+        db.ref(`calls/${callId}/signals/${userId}/${remoteId}`).set({ sdp: offer });
+
+        peer.onicecandidate = e => {
+          if (e.candidate) {
+            db.ref(`calls/${callId}/signals/${userId}/${remoteId}/ice`).push(e.candidate.toJSON());
           }
+        };
+
+        peer.ontrack = (e) => {
+          addRemoteStream(remoteId, e.streams[0]);
+        };
+      });
+
+      db.ref(`calls/${callId}/signals`).on("child_added", async snap => {
+        const fromId = snap.key;
+        if (fromId === userId) return;
+
+        const signal = snap.val()[userId];
+        if (!signal) return;
+
+        const peer = new RTCPeerConnection();
+        peers[fromId] = peer;
+
+        peer.onicecandidate = e => {
+          if (e.candidate) {
+            db.ref(`calls/${callId}/signals/${userId}/${fromId}/ice`).push(e.candidate.toJSON());
+          }
+        };
+
+        peer.ontrack = (e) => {
+          addRemoteStream(fromId, e.streams[0]);
+        };
+
+        peer.onconnectionstatechange = () => {
+          if (peer.connectionState === "disconnected" || peer.connectionState === "failed") {
+            document.getElementById(`vid_${fromId}`)?.remove();
+          }
+        };
+
+        peer.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+        const answer = await peer.createAnswer();
+        await peer.setLocalDescription(answer);
+        db.ref(`calls/${callId}/signals/${fromId}/${userId}`).set({ sdp: answer });
+
+        db.ref(`calls/${callId}/signals/${fromId}/${userId}/ice`).on("child_added", iceSnap => {
+          const candidate = new RTCIceCandidate(iceSnap.val());
+          peer.addIceCandidate(candidate);
         });
-
-        // Cleanup when someone leaves
-        window.addEventListener("beforeunload", () => {
-          db.ref(`calls/${callId}/users/${localId}`).remove();
-        });
-
-      })
-      .catch(err => {
-        alert("Failed to get camera/mic. Please allow permissions.");
-        console.error(err);
-      });
-
-    async function startConnection(remoteId) {
-      const peer = new RTCPeerConnection({
-        iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
-      });
-      connections[remoteId] = peer;
-
-      // Add tracks
-      localStream.getTracks().forEach(track => peer.addTrack(track, localStream));
-
-      // ICE candidates
-      peer.onicecandidate = event => {
-        if (event.candidate) {
-          db.ref(`calls/${callId}/signals/${remoteId}/${localId}/ice`).push(event.candidate.toJSON());
-        }
-      };
-
-      // Remote stream
-      peer.ontrack = event => {
-        const remoteVideo = document.createElement("video");
-        remoteVideo.autoplay = true;
-        remoteVideo.srcObject = event.streams[0];
-        document.body.appendChild(remoteVideo);
-      };
-
-      // Offer
-      const offer = await peer.createOffer();
-      await peer.setLocalDescription(offer);
-      db.ref(`calls/${callId}/signals/${remoteId}/${localId}/offer`).set(offer.toJSON());
-
-      // Wait for answer
-      db.ref(`calls/${callId}/signals/${localId}/${remoteId}/answer`).on("value", async snap => {
-        const answer = snap.val();
-        if (answer && !peer.currentRemoteDescription) {
-          await peer.setRemoteDescription(new RTCSessionDescription(answer));
-        }
-      });
-
-      // ICE from other side
-      db.ref(`calls/${callId}/signals/${localId}/${remoteId}/ice`).on("child_added", snap => {
-        const candidate = new RTCIceCandidate(snap.val());
-        peer.addIceCandidate(candidate);
-      });
-
-      // Wait for offer if other side started it first
-      db.ref(`calls/${callId}/signals/${localId}/${remoteId}/offer`).on("value", async snap => {
-        const offer = snap.val();
-        if (offer && !peer.currentRemoteDescription) {
-          await peer.setRemoteDescription(new RTCSessionDescription(offer));
-          const answer = await peer.createAnswer();
-          await peer.setLocalDescription(answer);
-          db.ref(`calls/${callId}/signals/${remoteId}/${localId}/answer`).set(answer.toJSON());
-        }
       });
     }
+
+    function addRemoteStream(id, stream) {
+      if (document.getElementById(`vid_${id}`)) return;
+
+      const video = document.createElement("video");
+      video.srcObject = stream;
+      video.autoplay = true;
+
+      const box = document.createElement("div");
+      box.className = "video-box";
+      box.id = `vid_${id}`;
+      box.appendChild(video);
+      const nameTag = document.createElement("p");
+      nameTag.innerText = id;
+      box.appendChild(nameTag);
+      videosDiv.appendChild(box);
+    }
+
+    document.getElementById("muteBtn").addEventListener("click", () => {
+      isMuted = !isMuted;
+      localStream.getAudioTracks().forEach(t => t.enabled = !isMuted);
+      document.getElementById("muteBtn").innerText = isMuted ? "Unmute" : "Mute";
+    });
+
+    document.getElementById("endBtn").addEventListener("click", () => {
+      location.href = "student.html"; // or wherever you want to send them
+    });
+
+    init();
   </script>
 </body>
 </html>
