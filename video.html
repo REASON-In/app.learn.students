@@ -1,121 +1,98 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8" />
   <title>Video Call</title>
   <style>
-    body {
-      background: #111;
-      color: white;
-      font-family: Arial, sans-serif;
-      margin: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-    }
-    video {
-      width: 45%;
-      margin: 10px;
-      border: 2px solid white;
-      border-radius: 12px;
-    }
-    #videos {
-      display: flex;
-      gap: 20px;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
+    body { font-family: sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; background: #f0f4f8; }
+    video { width: 90%; max-width: 500px; margin: 10px; border-radius: 10px; border: 2px solid #1e40af; }
+    button { padding: 10px 20px; margin-top: 10px; border: none; border-radius: 6px; background: #ef4444; color: white; font-weight: bold; cursor: pointer; }
   </style>
 </head>
 <body>
-  <h2>📞 Video Call</h2>
-  <div id="videos">
-    <video id="localVideo" autoplay muted playsinline></video>
-    <video id="remoteVideo" autoplay playsinline></video>
-  </div>
+  <h2>📞 Video Call Room</h2>
+  <video id="localVideo" autoplay playsinline muted></video>
+  <video id="remoteVideo" autoplay playsinline></video>
+  <button onclick="endCall()">Leave Call</button>
 
+  <!-- Firebase & WebRTC Logic -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyAHSxenlPZD8veD-iZ6pJIOVRbuTD2dw0Q",
       authDomain: "learn-3f43b.firebaseapp.com",
       databaseURL: "https://learn-3f43b-default-rtdb.firebaseio.com",
       projectId: "learn-3f43b",
-      storageBucket: "learn-3f43b.firebasestorage.app",
+      storageBucket: "learn-3f43b.appspot.com",
       messagingSenderId: "54412751232",
-      appId: "1:54412751232:web:31fe8e2f8b5cc03d409165",
+      appId: "1:54412751232:web:31fe8e2f8b5cc03d409165"
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const callId = urlParams.get("callId");
-    const callRef = db.ref(`calls/${callId}`);
-
     const localVideo = document.getElementById('localVideo');
     const remoteVideo = document.getElementById('remoteVideo');
 
-    let localStream, remoteStream;
-    let peer = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+    const callId = new URLSearchParams(window.location.search).get('callId');
+    const callRef = db.ref('calls/' + callId);
 
-    peer.ontrack = event => {
-      if (!remoteStream) {
-        remoteStream = new MediaStream();
-        remoteVideo.srcObject = remoteStream;
-      }
-      remoteStream.addTrack(event.track);
+    let localStream;
+    let remoteStream = new MediaStream();
+    let peer = new RTCPeerConnection({
+      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+    });
+
+    remoteVideo.srcObject = remoteStream;
+
+    peer.ontrack = e => {
+      e.streams[0].getTracks().forEach(track => {
+        remoteStream.addTrack(track);
+      });
     };
 
     peer.onicecandidate = e => {
       if (e.candidate) {
-        db.ref(`calls/${callId}/candidates/${isTeacher ? 'offer' : 'answer'}`).push(JSON.stringify(e.candidate));
+        db.ref(`calls/${callId}/candidates/${role}`).push(JSON.stringify(e.candidate));
       }
     };
 
-    let isTeacher = false;
+    let role = 'unknown';
 
-    async function init() {
+    async function start() {
       localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       localVideo.srcObject = localStream;
+      localStream.getTracks().forEach(track => peer.addTrack(track, localStream));
 
-      localStream.getTracks().forEach(track => {
-        peer.addTrack(track, localStream);
-      });
-
-      const snapshot = await callRef.child("offer").get();
-
-      if (snapshot.exists()) {
-        // Student joining
-        const offer = JSON.parse(snapshot.val());
-        await peer.setRemoteDescription(new RTCSessionDescription(offer));
-
+      const callSnap = await callRef.get();
+      if (callSnap.exists() && callSnap.val().offer) {
+        // 👨‍🎓 Student joining the call
+        role = 'answer';
+        const offer = JSON.parse(callSnap.val().offer);
+        await peer.setRemoteDescription(offer);
         const answer = await peer.createAnswer();
         await peer.setLocalDescription(answer);
-        await callRef.child("answer").set(JSON.stringify(answer));
+        await callRef.update({ answer: JSON.stringify(answer) });
       } else {
-        // Teacher creating call
-        isTeacher = true;
+        // 👩‍🏫 Teacher creating the call
+        role = 'offer';
         const offer = await peer.createOffer();
         await peer.setLocalDescription(offer);
-        await callRef.child("offer").set(JSON.stringify(offer));
+        await callRef.set({ offer: JSON.stringify(offer) });
       }
 
-      // Listen for answer (teacher side)
-      callRef.child("answer").on('value', snap => {
-        if (snap.exists() && !isTeacher) return;
-        const answer = JSON.parse(snap.val());
-        peer.setRemoteDescription(new RTCSessionDescription(answer));
+      // Listen for remote description (if you're the student)
+      callRef.child('answer').on('value', async snap => {
+        if (role === 'offer' && snap.exists()) {
+          const answer = JSON.parse(snap.val());
+          await peer.setRemoteDescription(answer);
+        }
       });
 
-      // Listen for new ICE candidates
-      callRef.child(`candidates/${isTeacher ? 'answer' : 'offer'}`).on('child_added', snap => {
-        const candidate = new RTCIceCandidate(JSON.parse(snap.val()));
-        peer.addIceCandidate(candidate);
-      });
-    }
+      // Listen for ICE candidates
+      db.ref(`calls/${callId}/candidates/${role === 'offer' ? 'answer' : 'offer'}`).on('child_added', snap => {
+        if (snap.exists()) {
+          const candidate = new RTCIceCandidate(JSON.parse(snap.val()));
 
     init();
   </script>
