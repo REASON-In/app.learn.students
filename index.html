@@ -1,9 +1,8 @@
-<!-- auth.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>School App Login</title>
+  <title>School App - Google Login</title>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
@@ -12,7 +11,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      margin-top: 40px;
+      margin-top: 60px;
     }
     h2 {
       margin-bottom: 10px;
@@ -23,6 +22,7 @@
       border-radius: 15px;
       width: 300px;
       box-shadow: 0 0 10px #00000044;
+      text-align: center;
     }
     input, select, button {
       width: 100%;
@@ -47,90 +47,84 @@
 <body>
 
   <div class="box">
-    <h2>School App Login</h2>
-    <input id="email" type="email" placeholder="School Email" required />
-    <input id="password" type="password" placeholder="Password" required />
-    <select id="role">
-      <option value="student">Student</option>
-      <option value="teacher">Teacher</option>
-    </select>
-    <input id="accessCode" type="text" placeholder="Enter School Code" required />
-    <button onclick="register()">Register</button>
-    <button onclick="login()">Login</button>
+    <h2>Login with Google</h2>
+    <button onclick="signInWithGoogle()">Sign in with Google</button>
+
+    <div id="extraForm" style="display:none;">
+      <input id="username" type="text" placeholder="Choose a Username" required />
+      <select id="role">
+        <option value="student">Student</option>
+        <option value="teacher">Teacher</option>
+      </select>
+      <button onclick="finishSetup()">Continue</button>
+    </div>
   </div>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
   <script>
-    // 🛠️ Your Firebase Config
-const firebaseConfig = {
-  apiKey: "AIzaSyAHSxenlPZD8veD-iZ6pJIOVRbuTD2dw0Q",
-  authDomain: "learn-3f43b.firebaseapp.com",
-  databaseURL: "https://learn-3f43b-default-rtdb.firebaseio.com",
-  projectId: "learn-3f43b",
-  storageBucket: "learn-3f43b.firebasestorage.app",
-  messagingSenderId: "54412751232",
-  appId: "1:54412751232:web:31fe8e2f8b5cc03d409165",
-  measurementId: "G-7HRKXL1EPS"
-};
+    // Your Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyAHSxenlPZD8veD-iZ6pJIOVRbuTD2dw0Q",
+      authDomain: "learn-3f43b.firebaseapp.com",
+      databaseURL: "https://learn-3f43b-default-rtdb.firebaseio.com",
+      projectId: "learn-3f43b",
+      storageBucket: "learn-3f43b.appspot.com",
+      messagingSenderId: "54412751232",
+      appId: "1:54412751232:web:31fe8e2f8b5cc03d409165",
+      measurementId: "G-7HRKXL1EPS"
+    };
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.database();
 
-    const VALID_CODES = {
-      student: "STUDENT123",
-      teacher: "TEACHER456"
-    };
+    let currentUID = null;
 
-    async function register() {
-      const email = emailInput.value;
-      const password = passwordInput.value;
-      const role = roleInput.value;
-      const code = accessCodeInput.value;
+    async function signInWithGoogle() {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      try {
+        const result = await auth.signInWithPopup(provider);
+        const user = result.user;
+        const email = user.email;
 
-      if (code !== VALID_CODES[role]) {
-        alert("Invalid access code for " + role);
+        // ✅ Only allow emails from your school
+        const domain = email.split('@')[1];
+        if (domain !== "school.edu") {
+          alert("Access denied: only school emails allowed.");
+          await auth.signOut();
+          return;
+        }
+
+        currentUID = user.uid;
+        const userRef = await db.ref("users/" + currentUID).get();
+        if (userRef.exists()) {
+          const role = userRef.val().role;
+          window.location.href = role === "teacher" ? "teacher.html" : "student.html";
+        } else {
+          document.getElementById("extraForm").style.display = "block";
+        }
+      } catch (err) {
+        alert("Google Sign-In Error: " + err.message);
+      }
+    }
+
+    async function finishSetup() {
+      const username = document.getElementById("username").value.trim();
+      const role = document.getElementById("role").value;
+
+      if (!username) {
+        alert("Please enter a username.");
         return;
       }
 
       try {
-        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-        const uid = userCredential.user.uid;
-        await db.ref("users/" + uid).set({ email, role });
-        alert("Registered! Redirecting...");
-        location.href = role === "teacher" ? "teacher.html" : "student.html";
-      } catch (error) {
-        alert("Register error: " + error.message);
+        await db.ref("users/" + currentUID).set({ username, role });
+        window.location.href = role === "teacher" ? "teacher.html" : "student.html";
+      } catch (err) {
+        alert("Error saving user: " + err.message);
       }
     }
-
-    async function login() {
-      const email = emailInput.value;
-      const password = passwordInput.value;
-
-      try {
-        const userCredential = await auth.signInWithEmailAndPassword(email, password);
-        const uid = userCredential.user.uid;
-        const snapshot = await db.ref("users/" + uid).get();
-        const role = snapshot.val()?.role;
-
-        if (!role) {
-          alert("No role assigned. Account blocked.");
-          return;
-        }
-
-        alert("Logged in as " + role);
-        location.href = role === "teacher" ? "teacher.html" : "student.html";
-      } catch (error) {
-        alert("Login error: " + error.message);
-      }
-    }
-
-    const emailInput = document.getElementById("email");
-    const passwordInput = document.getElementById("password");
-    const accessCodeInput = document.getElementById("accessCode");
-    const roleInput = document.getElementById("role");
   </script>
 </body>
 </html>
