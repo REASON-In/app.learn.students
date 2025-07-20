@@ -15,47 +15,67 @@
     body {
       margin: 0;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #ecf0f3;
+      background: #f1f5f9;
     }
     header {
-      background: #054a91;
-      padding: 10px 20px;
+      background: #1e293b;
+      padding: 12px 24px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       color: white;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
     }
     .nav {
       display: flex;
       gap: 10px;
     }
     .nav button {
-      background: #0969da;
+      background: #3b82f6;
       border: none;
       color: white;
-      padding: 10px 20px;
+      padding: 10px 16px;
       cursor: pointer;
-      border-radius: 6px;
+      border-radius: 8px;
+      font-weight: bold;
+      transition: background 0.3s;
+    }
+    .nav button:hover {
+      background: #2563eb;
     }
     .section {
       display: none;
       padding: 30px;
+      animation: fadeIn 0.3s ease-in-out;
     }
     .active {
       display: block;
     }
     .card {
       background: white;
-      border-radius: 10px;
-      padding: 20px;
+      border-radius: 12px;
+      padding: 24px;
       margin-top: 20px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
     }
     input[type="file"] {
       margin-top: 10px;
     }
     #aiOutput {
       white-space: pre-wrap;
+      background: #f3f4f6;
+      padding: 10px;
+      border-radius: 8px;
+      margin-top: 10px;
+    }
+    img#ppImg {
+      margin-top: 10px;
+      border-radius: 50%;
+      border: 2px solid #1e40af;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
     }
   </style>
 </head>
@@ -111,16 +131,16 @@
   </div>
 
   <script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyAHSxenlPZD8veD-iZ6pJIOVRbuTD2dw0Q",
-    authDomain: "learn-3f43b.firebaseapp.com",
-    databaseURL: "https://learn-3f43b-default-rtdb.firebaseio.com",
-    projectId: "learn-3f43b",
-    storageBucket: "learn-3f43b.firebasestorage.app",
-    messagingSenderId: "54412751232",
-    appId: "1:54412751232:web:31fe8e2f8b5cc03d409165",
-    measurementId: "G-7HRKXL1EPS"
-  };
+    const firebaseConfig = {
+      apiKey: "AIzaSyAHSxenlPZD8veD-iZ6pJIOVRbuTD2dw0Q",
+      authDomain: "learn-3f43b.firebaseapp.com",
+      databaseURL: "https://learn-3f43b-default-rtdb.firebaseio.com",
+      projectId: "learn-3f43b",
+      storageBucket: "learn-3f43b.firebasestorage.app",
+      messagingSenderId: "54412751232",
+      appId: "1:54412751232:web:31fe8e2f8b5cc03d409165",
+      measurementId: "G-7HRKXL1EPS"
+    };
     firebase.initializeApp(firebaseConfig);
 
     const auth = firebase.auth();
@@ -162,7 +182,6 @@
             container.innerText = 'No test scores available yet.';
           }
         });
-
       } else {
         alert("Please sign in.");
       }
