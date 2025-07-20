@@ -220,6 +220,15 @@
           document.getElementById("aiOutput").innerText = "Failed to reach AI.";
         });
     }
+    document.getElementById('ppUpload').addEventListener('change', function(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('ppImg').src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+});
   </script>
 </body>
 </html>
