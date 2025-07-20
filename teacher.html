@@ -177,39 +177,44 @@
       });
     }
 
-    function createCall() {
-      const className = document.getElementById('className').value.trim();
-      const callLink = document.getElementById('callLink').value.trim();
-      const msgElem = document.getElementById('callMessage');
-      msgElem.style.color = 'red';
+   function createCall() {
+  const className = document.getElementById('className').value.trim();
+  const callLink = document.getElementById('callLink').value.trim();
+  const msgElem = document.getElementById('callMessage');
+  msgElem.style.color = 'red';
 
-      if (!className) {
-        msgElem.innerText = "Class name is required.";
-        return;
-      }
-      if (!callLink) {
-        msgElem.innerText = "Call link is required.";
-        return;
-      }
+  if (!className) {
+    msgElem.innerText = "Class name is required.";
+    return;
+  }
+  if (!callLink) {
+    msgElem.innerText = "Call link is required.";
+    return;
+  }
 
-      // Push a new call into 'calls' node with a unique ID
-      const newCallRef = db.ref('calls').push();
+  const newCallRef = db.ref('calls').push();
 
-      newCallRef.set({
-        className,
-        teacher: teacherName,
-        link: callLink
-      })
-      .then(() => {
-        msgElem.style.color = 'green';
-        msgElem.innerText = `Video call created for class "${className}".`;
-        document.getElementById('className').value = '';
-        document.getElementById('callLink').value = '';
-      })
-      .catch(err => {
-        msgElem.innerText = "Failed to create call: " + err.message;
-      });
-    }
+  newCallRef.set({
+    className,
+    teacher: teacherName,
+    link: callLink
+  })
+  .then(() => {
+    msgElem.style.color = 'green';
+    msgElem.innerText = `Video call created for class "${className}".`;
+    document.getElementById('className').value = '';
+    document.getElementById('callLink').value = '';
+
+    // ✅ Open the call link in a new tab for the teacher only
+    window.open(callLink, '_blank');
+  })
+  .catch(err => {
+    msgElem.innerText = "Failed to create call: " + err.message;
+  });
+}
+
+
+  
   </script>
 </body>
 </html>
