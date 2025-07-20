@@ -1,20 +1,19 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Teacher Video Call</title>
+  <title>Teacher - Create Call</title>
 </head>
 <body>
-  <h2>Teacher - Create Call</h2>
-  <video id="localVideo" autoplay playsinline muted></video>
-  <video id="remoteVideo" autoplay playsinline></video>
-  <p>Call ID: <span id="callIdText">Generating...</span></p>
+  <h2>Teacher - Start Video Call</h2>
+  <input id="classNameInput" placeholder="Enter Class Name" />
+  <button onclick="createCall()">Start Call</button>
+  <p id="status"></p>
 
-  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
   <script>
- const firebaseConfig = {
+  const firebaseConfig = {
     apiKey: "AIzaSyAHSxenlPZD8veD-iZ6pJIOVRbuTD2dw0Q",
     authDomain: "learn-3f43b.firebaseapp.com",
     databaseURL: "https://learn-3f43b-default-rtdb.firebaseio.com",
@@ -27,51 +26,22 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const localVideo = document.getElementById("localVideo");
-    const remoteVideo = document.getElementById("remoteVideo");
-
-    let pc = new RTCPeerConnection();
-    let localStream = null;
-
-    async function start() {
-      localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-      localVideo.srcObject = localStream;
-
-      // Create offer
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
+    async function createCall() {
+      const className = document.getElementById("classNameInput").value;
+      if (!className) return alert("Please enter class name");
 
       const callRef = db.ref("calls").push();
       const callId = callRef.key;
-      document.getElementById("callIdText").innerText = callId;
 
-      callRef.set({ offer: offer.toJSON() });
-
-      pc.onicecandidate = e => {
-        if (e.candidate) {
-          callRef.child("offerCandidates").push(e.candidate.toJSON());
-        }
-      };
-
-      callRef.child("answer").on("value", async snapshot => {
-        const answer = snapshot.val();
-        if (answer && !pc.currentRemoteDescription) {
-          await pc.setRemoteDescription(new RTCSessionDescription(answer));
-        }
+      await callRef.set({
+        className: className,
+        timestamp: Date.now()
       });
 
-      callRef.child("answerCandidates").on("child_added", snapshot => {
-        const candidate = new RTCIceCandidate(snapshot.val());
-        pc.addIceCandidate(candidate);
-      });
+      document.getElementById("status").innerText = `Call created. Share with students or wait for join.`;
 
-      pc.ontrack = e => {
-        remoteVideo.srcObject = e.streams[0];
-      };
+      window.location.href = `video.html?callId=${callId}&role=teacher`;
     }
-
-    start();
   </script>
 </body>
 </html>
