@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmartLearn - Immersive Education</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://unpkg.com/feather-icons"></script>
+  <style>
+    .fade-in {
+      animation: fadeIn 0.8s ease forwards;
+    }
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .glass {
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+    }
+    th, td {
+      padding: 0.5rem;
+      border: 1px solid #e5e7eb;
+    }
+    input[type="time"] {
+      width: 100%;
+      padding: 4px;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-indigo-300 via-purple-300 to-pink-200 min-h-screen text-gray-800">
+  <!-- Auth/Login -->
+  <div id="login-section" class="fixed inset-0 flex flex-col items-center justify-center bg-white z-50">
+    <h1 class="text-3xl font-bold mb-6 text-purple-700">Login to SmartLearn</h1>
+    <button onclick="loginWithGoogle()" class="bg-red-500 text-white px-6 py-2 rounded shadow hover:bg-red-600">Login with Google</button>
+  </div>
+
+  <!-- View Timetable Button -->
+  <button onclick="toggleTimetableView()" class="fixed top-5 right-5 z-40 bg-white text-purple-700 px-4 py-2 rounded shadow hover:bg-purple-50">📅 View Timetable</button>
+
+  <!-- Timetable Modal -->
+  <div id="timetable-modal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-30">
+    <div class="bg-white rounded-2xl p-8 shadow-xl max-w-6xl w-full text-center overflow-auto max-h-[90vh]">
+      <h2 class="text-2xl font-bold mb-4 text-purple-700">🗓️ Weekly Study Timetable</h2>
+      <p class="mb-4 text-gray-700">Set subjects and time for each period (Mon–Fri).</p>
+      <table class="text-left text-sm w-full">
+        <thead class="bg-purple-100">
+          <tr>
+            <th>Day</th>
+            <th>Period 1</th><th>Time</th>
+            <th>Period 2</th><th>Time</th>
+            <th>Period 3</th><th>Time</th>
+            <th>Period 4</th><th>Time</th>
+            <th>Period 5</th><th>Time</th>
+          </tr>
+        </thead>
+        <tbody id="timetable-inputs"></tbody>
+      </table>
+      <button onclick="submitTimetable()" class="mt-6 bg-purple-600 text-white px-6 py-2 rounded-lg shadow hover:bg-purple-700">Save Timetable</button>
+    </div>
+  </div>
+
+  <!-- Main UI -->
+  <div id="main-ui" class="hidden">
+    <div class="max-w-5xl mx-auto p-6">
+      <header class="flex items-center justify-between mb-10 fade-in">
+        <h1 class="text-4xl font-extrabold text-white drop-shadow">SmartLearn 🌟</h1>
+        <div id="next-period" class="text-white text-sm font-semibold"></div>
+      </header>
+    </div>
+  </div>
+
+  <script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyAHSxenlPZD8veD-iZ6pJIOVRbuTD2dw0Q",
+    authDomain: "learn-3f43b.firebaseapp.com",
+    databaseURL: "https://learn-3f43b-default-rtdb.firebaseio.com",
+    projectId: "learn-3f43b",
+    storageBucket: "learn-3f43b.firebasestorage.app",
+    messagingSenderId: "54412751232",
+    appId: "1:54412751232:web:31fe8e2f8b5cc03d409165",
+    measurementId: "G-7HRKXL1EPS"
+  };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const auth = firebase.auth();
+
+    let userUID = null;
+
+function loginWithGoogle() {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider)
+    .then(result => {
+      userUID = result.user.uid;
+      document.getElementById("login-section").style.display = "none";
+      renderTimetableInputs();
+    })
+    .catch(error => {
+      alert("Login failed: " + error.message);
+      console.error(error);
+    });
+}
+
+    function renderTimetableInputs() {
+      const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+      const tbody = document.getElementById("timetable-inputs");
+      tbody.innerHTML = "";
+      days.forEach(day => {
+        const row = document.createElement("tr");
+        let html = <td>${day}</td>;
+        for (let i = 0; i < 5; i++) {
+          html += <td><input placeholder='Subject' /></td><td><input type='time' /></td>;
+        }
+        row.innerHTML = html;
+        tbody.appendChild(row);
+      });
+    }
+
+    function submitTimetable() {
+      const rows = document.querySelectorAll("#timetable-inputs tr");
+      const timetable = {};
+      let allFilled = true;
+      rows.forEach(row => {
+        const day = row.children[0].innerText;
+        timetable[day] = [];
+        for (let i = 1; i < row.children.length; i += 2) {
+          const subject = row.children[i].querySelector("input").value.trim();
+          const time = row.children[i + 1].querySelector("input").value;
+          if (!subject || !time) allFilled = false;
+          timetable[day].push({ subject, time });
+        }
+      });
+      if (!allFilled) return alert("Please fill in all subjects and times.");
+      db.ref(timetables/${userUID}).set(timetable);
+      document.getElementById("timetable-modal").style.display = "none";
+      document.getElementById("main-ui").classList.remove("hidden");
+      animatePeriodCountdown(timetable);
+    }
+
+    function toggleTimetableView() {
+      document.getElementById("timetable-modal").style.display = "flex";
+      renderTimetableInputs();
+    }
+
+    function animatePeriodCountdown(timetable) {
+      const nextEl = document.getElementById("next-period");
+      setInterval(() => {
+        const now = new Date();
+        const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+        const today = days[now.getDay()];
+        const todaysPeriods = timetable[today] || [];
+
+        let next = null;
+        for (let p of todaysPeriods) {
+          const [h, m] = p.time.split(":").map(Number);
+          const start = new Date(now);
+          start.setHours(h, m, 0);
+          if (start > now) {
+            next = { ...p, start };
+            break;
+          }
+        }
+
+        if (next) {
+          const diff = next.start - now;
+          const hrs = String(Math.floor(diff / 3600000)).padStart(2, '0');
+          const mins = String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0');
+          const secs = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
+          nextEl.innerText = Next: ${next.subject} at ${next.time} ⏳ ${hrs}:${mins}:${secs};
+        } else {
+          nextEl.innerText = ✅ No more periods today!;
+        }
+      }, 1000);
+    }
+
+    feather.replace();
+  </script>
+</body>
+</html>
