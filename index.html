@@ -1,136 +1,135 @@
+<!-- auth.html -->
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Video Call with Realtime DB</title>
+  <meta charset="UTF-8">
+  <title>School App Login</title>
   <style>
-    video {
-      width: 45%;
-      margin: 10px;
-      border: 2px solid #444;
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to right, #2b5876, #4e4376);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 40px;
+    }
+    h2 {
+      margin-bottom: 10px;
+    }
+    .box {
+      background: rgba(255,255,255,0.1);
+      padding: 20px;
+      border-radius: 15px;
+      width: 300px;
+      box-shadow: 0 0 10px #00000044;
+    }
+    input, select, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      border: none;
+      border-radius: 10px;
+      font-size: 1em;
     }
     button {
-      margin: 10px;
-      padding: 10px;
+      background-color: #00c6ff;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.3s ease;
+    }
+    button:hover {
+      background-color: #007ab3;
     }
   </style>
 </head>
 <body>
-  <h2>Video Call (Realtime DB)</h2>
-  <video id="localVideo" autoplay muted playsinline></video>
-  <video id="remoteVideo" autoplay playsinline></video><br>
 
-  <button onclick="createCall()">📞 Create Call</button>
-  <button onclick="joinCall()">📲 Join Call</button>
+  <div class="box">
+    <h2>School App Login</h2>
+    <input id="email" type="email" placeholder="School Email" required />
+    <input id="password" type="password" placeholder="Password" required />
+    <select id="role">
+      <option value="student">Student</option>
+      <option value="teacher">Teacher</option>
+    </select>
+    <input id="accessCode" type="text" placeholder="Enter School Code" required />
+    <button onclick="register()">Register</button>
+    <button onclick="login()">Login</button>
+  </div>
 
-  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-
   <script>
-    // ✅ Replace with YOUR Firebase config:
-const firebaseConfig = {
-  apiKey: "AIzaSyD1-V0gtFVkCOOawjp8QOP1lghgbsEBe_A",
-  authDomain: "fire-e0f2d.firebaseapp.com",
-  projectId: "fire-e0f2d",
-  storageBucket: "fire-e0f2d.firebasestorage.app",
-  messagingSenderId: "665998494762",
-  appId: "1:665998494762:web:29ff4a01b2a4634ff78753",
-  measurementId: "G-CDRH6QHQ92"
-};
-
+    // 🛠️ Your Firebase Config
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
     firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
     const db = firebase.database();
 
-    const pc = new RTCPeerConnection({
-      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-    });
-
-    let localStream;
-    let remoteStream = new MediaStream();
-
-    const localVideo = document.getElementById('localVideo');
-    const remoteVideo = document.getElementById('remoteVideo');
-
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
-      localStream = stream;
-      localVideo.srcObject = stream;
-      stream.getTracks().forEach(track => pc.addTrack(track, stream));
-    });
-
-    pc.ontrack = event => {
-      event.streams[0].getTracks().forEach(track => remoteStream.addTrack(track));
-      remoteVideo.srcObject = remoteStream;
+    const VALID_CODES = {
+      student: "STUDENT123",
+      teacher: "TEACHER456"
     };
 
-    pc.onicecandidate = event => {
-      if (event.candidate) {
-        const json = event.candidate.toJSON();
-        const path = role === "caller"
-          ? `calls/${callId}/callerCandidates`
-          : `calls/${callId}/calleeCandidates`;
-        db.ref(path).push(json);
-      }
-    };
+    async function register() {
+      const email = emailInput.value;
+      const password = passwordInput.value;
+      const role = roleInput.value;
+      const code = accessCodeInput.value;
 
-    let callId = "";
-    let role = "";
-
-    async function createCall() {
-      role = "caller";
-      callId = Math.random().toString(36).substring(2, 10);
-      const callRef = db.ref(`calls/${callId}`);
-
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-
-      await callRef.set({ offer });
-
-      alert(`Call ID: ${callId}`);
-
-      // Listen for answer
-      callRef.on("value", snapshot => {
-        const data = snapshot.val();
-        if (data?.answer && !pc.currentRemoteDescription) {
-          pc.setRemoteDescription(new RTCSessionDescription(data.answer));
-        }
-      });
-
-      // Listen for ICE from callee
-      db.ref(`calls/${callId}/calleeCandidates`).on("child_added", snap => {
-        const candidate = new RTCIceCandidate(snap.val());
-        pc.addIceCandidate(candidate);
-      });
-    }
-
-    async function joinCall() {
-      role = "callee";
-      callId = prompt("Enter Call ID:");
-      const callRef = db.ref(`calls/${callId}`);
-
-      const snapshot = await callRef.get();
-      const data = snapshot.val();
-
-      if (!data?.offer) {
-        alert("Invalid Call ID or no offer found.");
+      if (code !== VALID_CODES[role]) {
+        alert("Invalid access code for " + role);
         return;
       }
 
-      await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
-
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-
-      await callRef.update({ answer });
-
-      // Listen for ICE from caller
-      db.ref(`calls/${callId}/callerCandidates`).on("child_added", snap => {
-        const candidate = new RTCIceCandidate(snap.val());
-        pc.addIceCandidate(candidate);
-      });
-
-      // Listen for callee ICE
-      db.ref(`calls/${callId}/calleeCandidates`).on("child_added", () => {});
+      try {
+        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+        const uid = userCredential.user.uid;
+        await db.ref("users/" + uid).set({ email, role });
+        alert("Registered! Redirecting...");
+        location.href = role === "teacher" ? "teacher.html" : "student.html";
+      } catch (error) {
+        alert("Register error: " + error.message);
+      }
     }
+
+    async function login() {
+      const email = emailInput.value;
+      const password = passwordInput.value;
+
+      try {
+        const userCredential = await auth.signInWithEmailAndPassword(email, password);
+        const uid = userCredential.user.uid;
+        const snapshot = await db.ref("users/" + uid).get();
+        const role = snapshot.val()?.role;
+
+        if (!role) {
+          alert("No role assigned. Account blocked.");
+          return;
+        }
+
+        alert("Logged in as " + role);
+        location.href = role === "teacher" ? "teacher.html" : "student.html";
+      } catch (error) {
+        alert("Login error: " + error.message);
+      }
+    }
+
+    const emailInput = document.getElementById("email");
+    const passwordInput = document.getElementById("password");
+    const accessCodeInput = document.getElementById("accessCode");
+    const roleInput = document.getElementById("role");
   </script>
 </body>
 </html>
