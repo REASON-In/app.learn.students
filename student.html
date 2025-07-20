@@ -170,11 +170,11 @@
           const list = document.getElementById("callList");
           list.innerHTML = '';
           if (calls) {
-            Object.entries(calls).forEach(([key, call]) => {
-              const div = document.createElement('div');
-              div.innerHTML = `<strong>${call.className}</strong><br>Teacher: ${call.teacher}<br><button onclick="window.open('${call.link}')">Join Call</button>`;
-              list.appendChild(div);
-            });
+Object.entries(calls).forEach(([key, call]) => {
+  const div = document.createElement('div');
+  div.innerHTML = `<strong>${call.className}</strong><br>Teacher: ${call.teacher}<br><button onclick="window.open('/video.html?callId=${key}')">Join Call</button>`;
+  list.appendChild(div);
+});
           } else {
             list.innerText = "No calls yet.";
           }
