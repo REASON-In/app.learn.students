@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Explore School App</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to right, #232526, #414345);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    h1 {
+      margin-bottom: 10px;
+    }
+    .container {
+      background-color: rgba(255, 255, 255, 0.1);
+      padding: 30px;
+      border-radius: 20px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+      text-align: center;
+      max-width: 400px;
+    }
+    .reviews {
+      margin-top: 20px;
+    }
+    .review-card {
+      background-color: rgba(255, 255, 255, 0.08);
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      text-align: left;
+    }
+    textarea, input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      border: none;
+      border-radius: 10px;
+      resize: none;
+    }
+    button {
+      margin-top: 10px;
+      width: 100%;
+      padding: 10px;
+      font-size: 1em;
+      font-weight: bold;
+      border: none;
+      border-radius: 10px;
+      background-color: #00c6ff;
+      color: white;
+      cursor: pointer;
+      transition: 0.3s ease;
+    }
+    button:hover {
+      background-color: #007ab3;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>👀 Explore School App</h1>
+    <p>Welcome! Feel free to look around and leave a review or rating for our school.</p>
+
+    <div class="reviews" id="reviews"></div>
+
+    <h3>Leave a Review</h3>
+    <input type="text" id="reviewer" placeholder="Your Name">
+    <textarea id="reviewText" rows="3" placeholder="Write your review here..."></textarea>
+    <button onclick="submitReview()">Submit Review</button>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyAHSxenlPZD8veD-iZ6pJIOVRbuTD2dw0Q",
+      authDomain: "learn-3f43b.firebaseapp.com",
+      databaseURL: "https://learn-3f43b-default-rtdb.firebaseio.com",
+      projectId: "learn-3f43b",
+      storageBucket: "learn-3f43b.appspot.com",
+      messagingSenderId: "54412751232",
+      appId: "1:54412751232:web:31fe8e2f8b5cc03d409165",
+      measurementId: "G-7HRKXL1EPS"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    function submitReview() {
+      const name = document.getElementById("reviewer").value.trim();
+      const text = document.getElementById("reviewText").value.trim();
+      if (!name || !text) return alert("Please complete both fields.");
+
+      const reviewRef = db.ref("reviews").push();
+      reviewRef.set({ name, text });
+
+      document.getElementById("reviewer").value = "";
+      document.getElementById("reviewText").value = "";
+    }
+
+    db.ref("reviews").on("value", (snapshot) => {
+      const reviewsDiv = document.getElementById("reviews");
+      reviewsDiv.innerHTML = "";
+      snapshot.forEach((child) => {
+        const r = child.val();
+        const div = document.createElement("div");
+        div.className = "review-card";
+        div.innerHTML = `<strong>${r.name}:</strong><br>${r.text}`;
+        reviewsDiv.appendChild(div);
+      });
+    });
+  </script>
+</body>
+</html>
