@@ -1,226 +1,194 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Student Dashboard</title>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     * {
-      margin: 0;
-      padding: 0;
       box-sizing: border-box;
-      font-family: Arial, sans-serif;
     }
-
     body {
-      background-color: #f0f4f8;
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #ecf0f3;
     }
-
     header {
-      background-color: #0a3d62;
-      color: #fff;
-      padding: 15px 0;
-      text-align: center;
-    }
-
-    nav {
+      background: #054a91;
+      padding: 10px 20px;
       display: flex;
-      justify-content: center;
-      background-color: #1e5aa5;
-      padding: 10px;
+      align-items: center;
+      justify-content: space-between;
+      color: white;
+    }
+    .nav {
+      display: flex;
       gap: 10px;
     }
-
-    nav button {
-      background-color: #3478f6;
+    .nav button {
+      background: #0969da;
+      border: none;
       color: white;
       padding: 10px 20px;
-      border: none;
-      border-radius: 8px;
       cursor: pointer;
+      border-radius: 6px;
     }
-
-    nav button:hover {
-      background-color: #1559c7;
-    }
-
     .section {
       display: none;
-      padding: 40px;
-      height: calc(100vh - 110px);
-      overflow-y: auto;
+      padding: 30px;
     }
-
-    .section.active {
+    .active {
       display: block;
     }
-
-    #profile-pic {
-      width: 300px;
-      height: 300px;
-      border-radius: 50%;
-      object-fit: cover;
-      display: block;
-      margin: 0 auto 10px;
-    }
-
     .card {
-      background-color: #e0f0ff;
-      padding: 15px;
+      background: white;
       border-radius: 10px;
-      margin-bottom: 10px;
+      padding: 20px;
+      margin-top: 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     }
-
-    .strength-bar {
-      height: 20px;
-      background-color: #d1e0ff;
-      border-radius: 10px;
-      overflow: hidden;
-      margin-bottom: 10px;
+    input[type="file"] {
+      margin-top: 10px;
     }
-
-    .strength-bar span {
-      display: block;
-      height: 100%;
-      background-color: #4caf50;
+    #aiOutput {
+      white-space: pre-wrap;
     }
   </style>
 </head>
-
 <body>
   <header>
-    <h1>🎓 Student Dashboard</h1>
+    <h2>🎓 Student Dashboard</h2>
+    <div class="nav">
+      <button onclick="showSection('profile')">👤 Profile</button>
+      <button onclick="showSection('calls')">📹 Video Calls</button>
+      <button onclick="showSection('chat')">💬 Chat</button>
+      <button onclick="showSection('ai')">🤖 AI Assistant</button>
+      <button onclick="showSection('subjects')">📊 Subjects</button>
+    </div>
   </header>
-  <nav>
-    <button onclick="showSection('profile')">👤 Profile</button>
-    <button onclick="showSection('video')">📚 Video Calls</button>
-    <button onclick="showSection('chat')">💬 Chat</button>
-    <button onclick="showSection('ai')">🤖 AI Assistant</button>
-    <button onclick="showSection('subjects')">📊 Subjects</button>
-  </nav>
 
-  <section id="profile" class="section active">
-    <img id="profile-pic" src="" alt="Profile Picture" />
-    <input type="file" onchange="uploadProfilePic(event)" />
-    <p>Email: <span id="user-email">Loading...</span></p>
-  </section>
+  <div id="profile" class="section active">
+    <div class="card">
+      <h3>Profile</h3>
+      <input type="file" id="ppUpload" />
+      <img id="ppImg" src="" alt="Profile Picture" width="150" />
+      <p>Email: <span id="userEmail">Loading...</span></p>
+    </div>
+  </div>
 
-  <section id="video" class="section">
-    <h2>🎥 Join a Class Video Call</h2>
-    <div id="call-list"></div>
-  </section>
+  <div id="calls" class="section">
+    <div class="card">
+      <h3>🎥 Join a Class Video Call</h3>
+      <div id="callList">Loading...</div>
+    </div>
+  </div>
 
-  <section id="chat" class="section">
-    <h2>💬 Online Users</h2>
-    <ul id="online-users"></ul>
-  </section>
+  <div id="chat" class="section">
+    <div class="card">
+      <h3>Chat with Online Students</h3>
+      <div id="onlineUsers">No users online</div>
+    </div>
+  </div>
 
-  <section id="ai" class="section">
-    <h2>🤖 Ask AI</h2>
-    <input type="text" placeholder="Ask a question..." />
-    <button>Send</button>
-    <p><i>AI responses will go here...</i></p>
-  </section>
+  <div id="ai" class="section">
+    <div class="card">
+      <h3>Ask AI for Help</h3>
+      <textarea id="aiInput" rows="4" cols="50" placeholder="Ask your question..."></textarea><br>
+      <button onclick="askAI()">Ask</button>
+      <div id="aiOutput"></div>
+    </div>
+  </div>
 
-  <section id="subjects" class="section">
-    <h2>📊 Subject Strengths</h2>
-    <div id="subject-strengths"></div>
-  </section>
+  <div id="subjects" class="section">
+    <div class="card">
+      <h3>📈 Subject Strengths</h3>
+      <div id="subjectStrengths">Loading scores...</div>
+    </div>
+  </div>
 
   <script>
-    // Firebase config
-    const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-      databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT_ID.appspot.com",
-      messagingSenderId: "SENDER_ID",
-      appId: "APP_ID"
-    };
+  const firebaseConfig = {
+    apiKey: "AIzaSyAHSxenlPZD8veD-iZ6pJIOVRbuTD2dw0Q",
+    authDomain: "learn-3f43b.firebaseapp.com",
+    databaseURL: "https://learn-3f43b-default-rtdb.firebaseio.com",
+    projectId: "learn-3f43b",
+    storageBucket: "learn-3f43b.firebasestorage.app",
+    messagingSenderId: "54412751232",
+    appId: "1:54412751232:web:31fe8e2f8b5cc03d409165",
+    measurementId: "G-7HRKXL1EPS"
+  };
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+
     const auth = firebase.auth();
+    const db = firebase.database();
 
     function showSection(id) {
       document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
       document.getElementById(id).classList.add('active');
     }
 
-    function uploadProfilePic(e) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        document.getElementById('profile-pic').src = reader.result;
-        localStorage.setItem('profilePic', reader.result);
-      }
-      reader.readAsDataURL(e.target.files[0]);
-    }
-
-    function loadProfilePic() {
-      const pic = localStorage.getItem('profilePic');
-      if (pic) document.getElementById('profile-pic').src = pic;
-    }
-
-    // Load calls from Firebase
-    function loadVideoCalls() {
-      const callList = document.getElementById('call-list');
-      db.ref('videoCalls').on('value', snapshot => {
-        callList.innerHTML = '';
-        const data = snapshot.val();
-        if (data) {
-          Object.values(data).forEach(call => {
-            const card = document.createElement('div');
-            card.className = 'card';
-            card.innerHTML = `<strong>${call.class}</strong><br>Teacher: ${call.teacher}<br><button onclick="window.location='${call.link}'">Join Call</button>`;
-            callList.appendChild(card);
-          });
-        } else {
-          callList.innerHTML = '<p>No active calls right now.</p>';
-        }
-      });
-    }
-
-    // Show random subject strengths (simulate for now)
-    function showSubjectStrengths() {
-      const subjects = ["Math", "English", "Science", "History"];
-      const container = document.getElementById('subject-strengths');
-      container.innerHTML = '';
-      subjects.forEach(subject => {
-        const strength = Math.floor(Math.random() * 100);
-        const div = document.createElement('div');
-        div.innerHTML = `<strong>${subject}</strong><div class='strength-bar'><span style='width:${strength}%'></span></div>`;
-        container.appendChild(div);
-      });
-    }
-
-    window.onload = () => {
-      loadProfilePic();
-      showSubjectStrengths();
-      loadVideoCalls();
-      auth.onAuthStateChanged(user => {
-        if (user) {
-          document.getElementById('user-email').textContent = user.email;
-          db.ref('online/' + user.uid).set(true);
-          db.ref('online/' + user.uid).onDisconnect().remove();
-        }
-      });
-
-      db.ref('online').on('value', snap => {
-        const list = document.getElementById('online-users');
-        list.innerHTML = '';
-        if (!snap.exists()) return;
-        Object.keys(snap.val()).forEach(uid => {
-          const li = document.createElement('li');
-          li.textContent = uid;
-          list.appendChild(li);
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        document.getElementById("userEmail").innerText = user.email;
+        db.ref('calls').on('value', snap => {
+          const calls = snap.val();
+          const list = document.getElementById("callList");
+          list.innerHTML = '';
+          if (calls) {
+            Object.entries(calls).forEach(([key, call]) => {
+              const div = document.createElement('div');
+              div.innerHTML = `<strong>${call.className}</strong><br>Teacher: ${call.teacher}<br><button onclick="window.open('${call.link}')">Join Call</button>`;
+              list.appendChild(div);
+            });
+          } else {
+            list.innerText = "No calls yet.";
+          }
         });
-      });
+
+        db.ref('scores/' + user.uid).once('value', snap => {
+          const data = snap.val();
+          const container = document.getElementById("subjectStrengths");
+          container.innerHTML = '';
+          if (data) {
+            Object.entries(data).forEach(([subject, tests]) => {
+              const avg = tests.reduce((a,b) => a + b, 0) / tests.length;
+              container.innerHTML += `<p><strong>${subject}</strong>: ${avg.toFixed(1)}% (${avg > 75 ? '🟢 Strong' : avg > 50 ? '🟡 Moderate' : '🔴 Weak'})</p>`;
+            });
+          } else {
+            container.innerText = 'No test scores available yet.';
+          }
+        });
+
+      } else {
+        alert("Please sign in.");
+      }
+    });
+
+    function askAI() {
+      const question = document.getElementById("aiInput").value;
+      fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer YOUR_OPENAI_API_KEY"
+        },
+        body: JSON.stringify({
+          model: "gpt-3.5-turbo",
+          messages: [{ role: "user", content: question }]
+        })
+      })
+        .then(res => res.json())
+        .then(data => {
+          document.getElementById("aiOutput").innerText = data.choices[0].message.content;
+        })
+        .catch(err => {
+          document.getElementById("aiOutput").innerText = "Failed to reach AI.";
+        });
     }
   </script>
 </body>
-
 </html>
