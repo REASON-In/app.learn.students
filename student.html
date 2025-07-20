@@ -1,234 +1,69 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Student Dashboard</title>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <style>
-    * {
-      box-sizing: border-box;
-    }
-    body {
-      margin: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #f1f5f9;
-    }
-    header {
-      background: #1e293b;
-      padding: 12px 24px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      color: white;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-    }
-    .nav {
-      display: flex;
-      gap: 10px;
-    }
-    .nav button {
-      background: #3b82f6;
-      border: none;
-      color: white;
-      padding: 10px 16px;
-      cursor: pointer;
-      border-radius: 8px;
-      font-weight: bold;
-      transition: background 0.3s;
-    }
-    .nav button:hover {
-      background: #2563eb;
-    }
-    .section {
-      display: none;
-      padding: 30px;
-      animation: fadeIn 0.3s ease-in-out;
-    }
-    .active {
-      display: block;
-    }
-    .card {
-      background: white;
-      border-radius: 12px;
-      padding: 24px;
-      margin-top: 20px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-    }
-    input[type="file"] {
-      margin-top: 10px;
-    }
-    #aiOutput {
-      white-space: pre-wrap;
-      background: #f3f4f6;
-      padding: 10px;
-      border-radius: 8px;
-      margin-top: 10px;
-    }
-    img#ppImg {
-      margin-top: 10px;
-      border-radius: 50%;
-      border: 2px solid #1e40af;
-    }
-    .strengthTag {
-      font-weight: bold;
-      padding: 4px 8px;
-      border-radius: 6px;
-      color: white;
-      margin-left: 10px;
-    }
-    .strong { background: green; }
-    .moderate { background: orange; }
-    .weak { background: red; }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-  </style>
+  <title>Student Video Call</title>
 </head>
 <body>
-  <header>
-    <h2>🎓 Student Dashboard</h2>
-    <div class="nav">
-      <button onclick="showSection('profile')">👤 Profile</button>
-      <button onclick="showSection('calls')">📹 Video Calls</button>
-      <button onclick="showSection('chat')">💬 Chat</button>
-      <button onclick="showSection('ai')">🤖 AI Assistant</button>
-      <button onclick="showSection('subjects')">📊 Subjects</button>
-    </div>
-  </header>
+  <h2>Student - Join Call</h2>
+  <input id="callIdInput" placeholder="Enter Call ID" />
+  <button onclick="joinCall()">Join</button>
+  <br><br>
+  <video id="localVideo" autoplay playsinline muted></video>
+  <video id="remoteVideo" autoplay playsinline></video>
 
-  <div id="profile" class="section active">
-    <div class="card">
-      <h3>Profile</h3>
-      <input type="file" id="ppUpload" />
-      <img id="ppImg" src="" alt="Profile Picture" width="150" />
-      <p>Email: <span id="userEmail">Loading...</span></p>
-    </div>
-  </div>
-
-  <div id="calls" class="section">
-    <div class="card">
-      <h3>🎥 Join a Class Video Call</h3>
-      <div id="callList">Loading...</div>
-    </div>
-  </div>
-
-  <div id="chat" class="section">
-    <div class="card">
-      <h3>Chat with Online Students</h3>
-      <div id="onlineUsers">No users online</div>
-    </div>
-  </div>
-
-  <div id="ai" class="section">
-    <div class="card">
-      <h3>Ask AI for Help</h3>
-      <textarea id="aiInput" rows="4" cols="50" placeholder="Ask your question..."></textarea><br>
-      <button onclick="askAI()">Ask</button>
-      <div id="aiOutput"></div>
-    </div>
-  </div>
-
-  <div id="subjects" class="section">
-    <div class="card">
-      <h3>📈 Subject Strengths</h3>
-      <div id="subjectStrengths">Loading scores...</div>
-    </div>
-  </div>
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
   <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyAHSxenlPZD8veD-iZ6pJIOVRbuTD2dw0Q",
-      authDomain: "learn-3f43b.firebaseapp.com",
-      databaseURL: "https://learn-3f43b-default-rtdb.firebaseio.com",
-      projectId: "learn-3f43b",
-      storageBucket: "learn-3f43b.firebasestorage.app",
-      messagingSenderId: "54412751232",
-      appId: "1:54412751232:web:31fe8e2f8b5cc03d409165",
-      measurementId: "G-7HRKXL1EPS"
-    };
+  const firebaseConfig = {
+    apiKey: "AIzaSyAHSxenlPZD8veD-iZ6pJIOVRbuTD2dw0Q",
+    authDomain: "learn-3f43b.firebaseapp.com",
+    databaseURL: "https://learn-3f43b-default-rtdb.firebaseio.com",
+    projectId: "learn-3f43b",
+    storageBucket: "learn-3f43b.firebasestorage.app",
+    messagingSenderId: "54412751232",
+    appId: "1:54412751232:web:31fe8e2f8b5cc03d409165",
+    measurementId: "G-7HRKXL1EPS"
+  };
     firebase.initializeApp(firebaseConfig);
-
-    const auth = firebase.auth();
     const db = firebase.database();
 
-    function showSection(id) {
-      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-      document.getElementById(id).classList.add('active');
+    const localVideo = document.getElementById("localVideo");
+    const remoteVideo = document.getElementById("remoteVideo");
+    let pc = new RTCPeerConnection();
+    let localStream = null;
+
+    async function joinCall() {
+      const callId = document.getElementById("callIdInput").value;
+      const callRef = db.ref("calls/" + callId);
+      const callData = (await callRef.get()).val();
+
+      localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+      localVideo.srcObject = localStream;
+
+      pc.onicecandidate = e => {
+        if (e.candidate) {
+          callRef.child("answerCandidates").push(e.candidate.toJSON());
+        }
+      };
+
+      pc.ontrack = e => {
+        remoteVideo.srcObject = e.streams[0];
+      };
+
+      await pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+
+      callRef.child("answer").set(answer.toJSON());
+
+      callRef.child("offerCandidates").on("child_added", snapshot => {
+        const candidate = new RTCIceCandidate(snapshot.val());
+        pc.addIceCandidate(candidate);
+      });
     }
-
-    auth.onAuthStateChanged(user => {
-      if (user) {
-        document.getElementById("userEmail").innerText = user.email;
-
-        db.ref('calls').on('value', snap => {
-          const calls = snap.val();
-          const list = document.getElementById("callList");
-          list.innerHTML = '';
-          if (calls) {
-Object.entries(calls).forEach(([key, call]) => {
-  const div = document.createElement('div');
-  div.innerHTML = `<strong>${call.className}</strong><br>Teacher: ${call.teacher}<br><button onclick="window.open('/video.html?callId=${key}')">Join Call</button>`;
-  list.appendChild(div);
-});
-          } else {
-            list.innerText = "No calls yet.";
-          }
-        });
-
-        db.ref('scores/' + user.uid).once('value', snap => {
-          const data = snap.val();
-          const container = document.getElementById("subjectStrengths");
-          container.innerHTML = '';
-          if (data) {
-            Object.entries(data).forEach(([subject, tests]) => {
-              const avg = tests.reduce((a,b) => a + b, 0) / tests.length;
-              let tag = avg > 75 ? '<span class="strengthTag strong">Strong</span>' : avg > 50 ? '<span class="strengthTag moderate">Moderate</span>' : '<span class="strengthTag weak">Needs Work</span>';
-              container.innerHTML += `<p><strong>${subject}</strong>: ${avg.toFixed(1)}% ${tag}</p>`;
-            });
-          } else {
-            container.innerText = 'No test scores available yet.';
-          }
-        });
-      } else {
-        alert("Please sign in.");
-      }
-    });
-
-    function askAI() {
-      const question = document.getElementById("aiInput").value;
-      fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer YOUR_OPENAI_API_KEY"
-        },
-        body: JSON.stringify({
-          model: "gpt-3.5-turbo",
-          messages: [{ role: "user", content: question }]
-        })
-      })
-        .then(res => res.json())
-        .then(data => {
-          document.getElementById("aiOutput").innerText = data.choices[0].message.content;
-        })
-        .catch(err => {
-          document.getElementById("aiOutput").innerText = "Failed to reach AI.";
-        });
-    }
-    document.getElementById('ppUpload').addEventListener('change', function(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    document.getElementById('ppImg').src = e.target.result;
-  };
-  reader.readAsDataURL(file);
-});
   </script>
 </body>
 </html>
