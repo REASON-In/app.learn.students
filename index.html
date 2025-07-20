@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Study Timetable App</title>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
   <style>
     body {
       background: linear-gradient(to right, #6a11cb, #2575fc);
@@ -20,19 +20,11 @@
       padding: 2rem;
       margin-top: 3rem;
     }
-    .pulse {
-      animation: pulse 1s infinite;
-    }
-    @keyframes pulse {
-      0% { opacity: 1; }
-      50% { opacity: 0.6; }
-      100% { opacity: 1; }
-    }
   </style>
 </head>
 <body class="min-h-screen flex items-center justify-center">
   <div class="container mx-auto max-w-7xl">
-    <div class="text-center text-white">
+    <div class="text-center text-white" id="authSection">
       <h1 class="text-4xl font-bold mb-4">📚 Study Timetable</h1>
       <button id="loginBtn" class="bg-white text-blue-600 px-6 py-2 rounded-full font-semibold hover:bg-blue-100">Login with Google</button>
     </div>
@@ -52,27 +44,28 @@
               <th class="p-2">Period 5</th><th class="p-2">Time</th>
             </tr>
           </thead>
-          <tbody id="timetableBody">
-          </tbody>
+          <tbody id="timetableBody"></tbody>
         </table>
       </div>
       <div class="mt-4 text-center">
-        <button onclick="saveTimetable()" class="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700">Save Timetable</button>
+        <button id="saveBtn" class="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700">Save Timetable</button>
       </div>
     </div>
   </div>
 
   <script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyAHSxenlPZD8veD-iZ6pJIOVRbuTD2dw0Q",
-    authDomain: "learn-3f43b.firebaseapp.com",
-    databaseURL: "https://learn-3f43b-default-rtdb.firebaseio.com",
-    projectId: "learn-3f43b",
-    storageBucket: "learn-3f43b.firebasestorage.app",
-    messagingSenderId: "54412751232",
-    appId: "1:54412751232:web:31fe8e2f8b5cc03d409165",
-    measurementId: "G-7HRKXL1EPS"
-  };
+    // Firebase config + initialization
+    const firebaseConfig = {
+      apiKey: "AIzaSyAHSxenlPZD8veD-iZ6pJIOVRbuTD2dw0Q",
+      authDomain: "learn-3f43b.firebaseapp.com",
+      databaseURL: "https://learn-3f43b-default-rtdb.firebaseio.com",
+      projectId: "learn-3f43b",
+      storageBucket: "learn-3f43b.firebasestorage.app",
+      messagingSenderId: "54412751232",
+      appId: "1:54412751232:web:31fe8e2f8b5cc03d409165",
+      measurementId: "G-7HRKXL1EPS"
+    };
+
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
@@ -80,8 +73,10 @@
     const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
     const timetableBody = document.getElementById("timetableBody");
 
+    // Helper: get current user's UID
     const userUID = () => auth.currentUser?.uid;
 
+    // Render the timetable input table
     function renderTable() {
       timetableBody.innerHTML = "";
       days.forEach(day => {
@@ -97,47 +92,29 @@
       });
     }
 
+    // Load timetable from Firestore and populate inputs
     async function loadTimetable() {
       const uid = userUID();
       if (!uid) return;
-      const doc = await db.collection("timetables").doc(uid).get();
-      if (doc.exists) {
-        const data = doc.data();
-        document.querySelectorAll("input[data-day]").forEach(input => {
-          const { day, period } = input.dataset;
-          if (data[day]?.[`p${period}`]) input.value = data[day][`p${period}`];
-        });
-        document.querySelectorAll("input[data-time]").forEach(input => {
-          const { day, time } = input.dataset;
-          if (data[day]?.[`t${time}`]) input.value = data[day][`t${time}`];
-        });
-      }
-    }
-
-    async function saveTimetable() {
-      const uid = userUID();
-      if (!uid) return alert("Login first.");
-      const timetable = {};
-      for (const day of days) {
-        timetable[day] = {};
-        const times = [];
-        for (let p = 1; p <= 5; p++) {
-          const subjInput = document.querySelector(`input[data-day='${day}'][data-period='${p}']`);
-          const timeInput = document.querySelector(`input[data-day='${day}'][data-time='${p}']`);
-          const subject = subjInput.value;
-          const time = timeInput.value;
-          if (subject && time) {
-            timetable[day][`p${p}`] = subject;
-            timetable[day][`t${p}`] = time;
-            times.push(time);
-          }
+      try {
+        const doc = await db.collection("timetables").doc(uid).get();
+        if (doc.exists) {
+          const data = doc.data();
+          document.querySelectorAll("input[data-day]").forEach(input => {
+            const { day, period } = input.dataset;
+            if (period && data[day]?.[`p${period}`]) input.value = data[day][`p${period}`];
+          });
+          document.querySelectorAll("input[data-time]").forEach(input => {
+            const { day, time } = input.dataset;
+            if (time && data[day]?.[`t${time}`]) input.value = data[day][`t${time}`];
+          });
         }
-        if (!isChronological(times)) return alert(`${day}'s periods must be in order.`);
+      } catch (error) {
+        console.error("Failed to load timetable:", error);
       }
-      await db.collection("timetables").doc(uid).set(timetable);
-      alert("Timetable saved!");
     }
 
+    // Validate times are strictly chronological
     function isChronological(times) {
       const toMins = t => {
         const [h, m] = t.split(":").map(Number);
@@ -149,18 +126,78 @@
       return true;
     }
 
-    document.getElementById("loginBtn").addEventListener("click", async () => {
+    // Save timetable inputs to Firestore
+    async function saveTimetable() {
+      const uid = userUID();
+      if (!uid) return alert("Please login first.");
+
+      const timetable = {};
+      for (const day of days) {
+        timetable[day] = {};
+        const times = [];
+        for (let p = 1; p <= 5; p++) {
+          const subjInput = document.querySelector(`input[data-day='${day}'][data-period='${p}']`);
+          const timeInput = document.querySelector(`input[data-day='${day}'][data-time='${p}']`);
+          const subject = subjInput.value.trim();
+          const time = timeInput.value;
+          if (subject && time) {
+            timetable[day][`p${p}`] = subject;
+            timetable[day][`t${p}`] = time;
+            times.push(time);
+          }
+        }
+        if (times.length > 1 && !isChronological(times)) {
+          alert(`${day}'s periods must be in chronological order.`);
+          return;
+        }
+      }
       try {
-        const provider = new firebase.auth.GoogleAuthProvider();
-        const result = await auth.signInWithPopup(provider);
-        document.getElementById("timetableSection").classList.remove("hidden");
-        renderTable();
-        loadTimetable();
+        await db.collection("timetables").doc(uid).set(timetable);
+        alert("Timetable saved!");
+      } catch (error) {
+        alert("Error saving timetable: " + error.message);
+      }
+    }
+
+    // Login button event
+    document.getElementById("loginBtn").addEventListener("click", async () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      try {
+        await auth.signInWithPopup(provider);
+        showTimetableSection(true);
       } catch (err) {
         alert("Login failed: " + err.message);
       }
     });
+
+    // Save button event
+    document.getElementById("saveBtn").addEventListener("click", saveTimetable);
+
+    // Show/hide sections based on login state
+    function showTimetableSection(show) {
+      const authSection = document.getElementById("authSection");
+      const timetableSection = document.getElementById("timetableSection");
+      if (show) {
+        authSection.classList.add("hidden");
+        timetableSection.classList.remove("hidden");
+        renderTable();
+        loadTimetable();
+      } else {
+        authSection.classList.remove("hidden");
+        timetableSection.classList.add("hidden");
+        timetableBody.innerHTML = "";
+      }
+    }
+
+    // Listen for auth state changes (auto-login)
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        showTimetableSection(true);
+      } else {
+        showTimetableSection(false);
+      }
+    });
+
   </script>
 </body>
 </html>
-
