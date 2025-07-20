@@ -1,17 +1,12 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Student Video Call</title>
+  <title>Student - Join Call</title>
 </head>
 <body>
-  <h2>Student - Join Call</h2>
-  <input id="callIdInput" placeholder="Enter Call ID" />
-  <button onclick="joinCall()">Join</button>
-  <br><br>
-  <video id="localVideo" autoplay playsinline muted></video>
-  <video id="remoteVideo" autoplay playsinline></video>
+  <h2>Join a Video Call</h2>
+  <div id="callsList">Loading calls...</div>
 
-  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
@@ -29,40 +24,28 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const localVideo = document.getElementById("localVideo");
-    const remoteVideo = document.getElementById("remoteVideo");
-    let pc = new RTCPeerConnection();
-    let localStream = null;
+    const callsDiv = document.getElementById("callsList");
 
-    async function joinCall() {
-      const callId = document.getElementById("callIdInput").value;
-      const callRef = db.ref("calls/" + callId);
-      const callData = (await callRef.get()).val();
+    db.ref("calls").on("value", snapshot => {
+      callsDiv.innerHTML = "";
+      const calls = snapshot.val();
+      if (!calls) {
+        callsDiv.innerText = "No active calls.";
+        return;
+      }
 
-      localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-      localVideo.srcObject = localStream;
-
-      pc.onicecandidate = e => {
-        if (e.candidate) {
-          callRef.child("answerCandidates").push(e.candidate.toJSON());
-        }
-      };
-
-      pc.ontrack = e => {
-        remoteVideo.srcObject = e.streams[0];
-      };
-
-      await pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-
-      callRef.child("answer").set(answer.toJSON());
-
-      callRef.child("offerCandidates").on("child_added", snapshot => {
-        const candidate = new RTCIceCandidate(snapshot.val());
-        pc.addIceCandidate(candidate);
+      Object.entries(calls).forEach(([callId, callData]) => {
+        const div = document.createElement("div");
+        div.innerHTML = `
+          <strong>${callData.className}</strong>
+          <button onclick="joinCall('${callId}')">Join</button>
+        `;
+        callsDiv.appendChild(div);
       });
+    });
+
+    function joinCall(callId) {
+      window.location.href = `video.html?callId=${callId}&role=student`;
     }
   </script>
 </body>
