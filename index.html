@@ -1,42 +1,64 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Smart Study Timetable</title>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Study Timetable App</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    body {
+      background: linear-gradient(to right, #6a11cb, #2575fc);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .card {
+      background-color: white;
+      border-radius: 20px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+      padding: 2rem;
+      margin-top: 3rem;
+    }
+    .pulse {
+      animation: pulse 1s infinite;
+    }
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.6; }
+      100% { opacity: 1; }
+    }
+  </style>
 </head>
-<body class="bg-gradient-to-br from-purple-900 to-indigo-900 min-h-screen text-white">
-  <div class="flex flex-col items-center justify-center py-10">
-    <h1 class="text-3xl font-bold mb-4">📚 Smart Study Timetable</h1>
-    <button id="loginBtn" class="bg-white text-black px-4 py-2 rounded mb-6 hover:bg-gray-200">Login with Google</button>
-    <div id="timetableContainer" class="hidden w-full max-w-6xl mx-auto bg-white text-black p-6 rounded-xl shadow-lg">
-      <h2 class="text-2xl font-semibold text-purple-800 mb-4">Weekly Study Timetable</h2>
-      <p class="text-gray-600 mb-4">Set subjects and time for each period (Mon–Fri).</p>
-      <div class="overflow-auto">
-        <table class="table-auto w-full text-center border">
+<body class="min-h-screen flex items-center justify-center">
+  <div class="container mx-auto max-w-7xl">
+    <div class="text-center text-white">
+      <h1 class="text-4xl font-bold mb-4">📚 Study Timetable</h1>
+      <button id="loginBtn" class="bg-white text-blue-600 px-6 py-2 rounded-full font-semibold hover:bg-blue-100">Login with Google</button>
+    </div>
+
+    <div id="timetableSection" class="hidden card">
+      <h2 class="text-2xl font-semibold text-purple-700 mb-4">Weekly Study Timetable</h2>
+      <p class="text-gray-600 mb-4">Enter your subjects and times for each day.</p>
+      <div class="overflow-x-auto">
+        <table class="table-auto w-full text-left border-collapse">
           <thead>
-            <tr class="bg-purple-200">
+            <tr class="bg-purple-100">
               <th class="p-2">Day</th>
-              <th class="p-2">Period 1</th>
-              <th class="p-2">Time</th>
-              <th class="p-2">Period 2</th>
-              <th class="p-2">Time</th>
-              <th class="p-2">Period 3</th>
-              <th class="p-2">Time</th>
-              <th class="p-2">Period 4</th>
-              <th class="p-2">Time</th>
-              <th class="p-2">Period 5</th>
-              <th class="p-2">Time</th>
+              <th class="p-2">Period 1</th><th class="p-2">Time</th>
+              <th class="p-2">Period 2</th><th class="p-2">Time</th>
+              <th class="p-2">Period 3</th><th class="p-2">Time</th>
+              <th class="p-2">Period 4</th><th class="p-2">Time</th>
+              <th class="p-2">Period 5</th><th class="p-2">Time</th>
             </tr>
           </thead>
-          <tbody id="timetableBody"></tbody>
+          <tbody id="timetableBody">
+          </tbody>
         </table>
       </div>
-      <button id="saveBtn" class="mt-4 bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">Save Timetable</button>
+      <div class="mt-4 text-center">
+        <button onclick="saveTimetable()" class="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700">Save Timetable</button>
+      </div>
     </div>
   </div>
 
@@ -46,103 +68,97 @@
       authDomain: "YOUR_AUTH_DOMAIN",
       projectId: "YOUR_PROJECT_ID",
       storageBucket: "YOUR_STORAGE_BUCKET",
-      messagingSenderId: "YOUR_SENDER_ID",
+      messagingSenderId: "YOUR_MSG_ID",
       appId: "YOUR_APP_ID"
     };
-
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    const loginBtn = document.getElementById('loginBtn');
-    const timetableContainer = document.getElementById('timetableContainer');
-    const timetableBody = document.getElementById('timetableBody');
-    const saveBtn = document.getElementById('saveBtn');
+    const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+    const timetableBody = document.getElementById("timetableBody");
 
-    let currentUser = null;
-    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+    const userUID = () => auth.currentUser?.uid;
 
-    loginBtn.onclick = () => {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider)
-        .then(result => {
-          currentUser = result.user;
-          loginBtn.classList.add('hidden');
-          timetableContainer.classList.remove('hidden');
-          loadTimetable();
-        })
-        .catch(error => alert('Login failed: ' + error.message));
-    };
-
-    function createTimetableInputs() {
-      timetableBody.innerHTML = '';
+    function renderTable() {
+      timetableBody.innerHTML = "";
       days.forEach(day => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
+        const row = document.createElement("tr");
+        row.innerHTML = `
           <td class="p-2 font-semibold">${day}</td>
-          ${[1,2,3,4,5].map(i => `
-            <td class="p-2"><input class="period${i} w-full border px-2 py-1" /></td>
-            <td class="p-2"><input type="time" class="time${i} w-full border px-2 py-1" /></td>
-          `).join('')}
+          ${[1,2,3,4,5].map(p => `
+            <td><input class="border p-1" data-day="${day}" data-period="${p}" placeholder="Subject"></td>
+            <td><input type="time" class="border p-1" data-day="${day}" data-time="${p}"></td>
+          `).join("")}
         `;
-        timetableBody.appendChild(tr);
+        timetableBody.appendChild(row);
       });
     }
 
-    function parseTimeToDate(timeStr) {
-      const [hour, minute] = timeStr.split(':').map(Number);
-      const now = new Date();
-      return new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, minute);
+    async function loadTimetable() {
+      const uid = userUID();
+      if (!uid) return;
+      const doc = await db.collection("timetables").doc(uid).get();
+      if (doc.exists) {
+        const data = doc.data();
+        document.querySelectorAll("input[data-day]").forEach(input => {
+          const { day, period } = input.dataset;
+          if (data[day]?.[`p${period}`]) input.value = data[day][`p${period}`];
+        });
+        document.querySelectorAll("input[data-time]").forEach(input => {
+          const { day, time } = input.dataset;
+          if (data[day]?.[`t${time}`]) input.value = data[day][`t${time}`];
+        });
+      }
     }
 
-    function validateTimetable() {
-      for (let row of timetableBody.children) {
+    async function saveTimetable() {
+      const uid = userUID();
+      if (!uid) return alert("Login first.");
+      const timetable = {};
+      for (const day of days) {
+        timetable[day] = {};
         const times = [];
-        for (let i = 1; i <= 5; i++) {
-          const timeInput = row.querySelector(`.time${i}`).value;
-          if (!timeInput) return false;
-          times.push(parseTimeToDate(timeInput));
-        }
-        for (let i = 1; i < times.length; i++) {
-          if (times[i] <= times[i-1]) {
-            alert("Periods must be in chronological order.");
-            return false;
+        for (let p = 1; p <= 5; p++) {
+          const subjInput = document.querySelector(`input[data-day='${day}'][data-period='${p}']`);
+          const timeInput = document.querySelector(`input[data-day='${day}'][data-time='${p}']`);
+          const subject = subjInput.value;
+          const time = timeInput.value;
+          if (subject && time) {
+            timetable[day][`p${p}`] = subject;
+            timetable[day][`t${p}`] = time;
+            times.push(time);
           }
         }
+        if (!isChronological(times)) return alert(`${day}'s periods must be in order.`);
+      }
+      await db.collection("timetables").doc(uid).set(timetable);
+      alert("Timetable saved!");
+    }
+
+    function isChronological(times) {
+      const toMins = t => {
+        const [h, m] = t.split(":").map(Number);
+        return h * 60 + m;
+      };
+      for (let i = 1; i < times.length; i++) {
+        if (toMins(times[i]) <= toMins(times[i - 1])) return false;
       }
       return true;
     }
 
-    saveBtn.onclick = async () => {
-      if (!validateTimetable()) return;
-      const timetable = {};
-      for (let [index, row] of [...timetableBody.children].entries()) {
-        const day = days[index];
-        timetable[day] = [];
-        for (let i = 1; i <= 5; i++) {
-          const subject = row.querySelector(`.period${i}`).value.trim();
-          const time = row.querySelector(`.time${i}`).value.trim();
-          timetable[day].push({ subject, time });
-        }
+    document.getElementById("loginBtn").addEventListener("click", async () => {
+      try {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        const result = await auth.signInWithPopup(provider);
+        document.getElementById("timetableSection").classList.remove("hidden");
+        renderTable();
+        loadTimetable();
+      } catch (err) {
+        alert("Login failed: " + err.message);
       }
-      await db.collection("timetables").doc(currentUser.uid).set(timetable);
-      alert("Timetable saved successfully!");
-    };
-
-    async function loadTimetable() {
-      createTimetableInputs();
-      const doc = await db.collection("timetables").doc(currentUser.uid).get();
-      if (!doc.exists) return;
-      const data = doc.data();
-      [...timetableBody.children].forEach((row, rowIndex) => {
-        const day = days[rowIndex];
-        const periods = data[day];
-        for (let i = 1; i <= 5; i++) {
-          row.querySelector(`.period${i}`).value = periods[i-1].subject;
-          row.querySelector(`.time${i}`).value = periods[i-1].time;
-        }
-      });
-    }
+    });
   </script>
 </body>
 </html>
+
