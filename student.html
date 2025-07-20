@@ -1,118 +1,121 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Student Dashboard</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
   <style>
+    * { box-sizing: border-box; }
     body {
-      font-family: 'Poppins', sans-serif;
       margin: 0;
-      background: linear-gradient(120deg, #89f7fe, #66a6ff);
+      font-family: 'Poppins', sans-serif;
+      background: #f0f4f8;
       color: #333;
     }
     header {
       background-color: #004080;
       color: white;
-      padding: 1rem 2rem;
+      padding: 1rem;
       text-align: center;
       font-size: 1.5rem;
     }
-    .container {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      gap: 1.5rem;
+    nav {
+      display: flex;
+      justify-content: space-around;
+      background-color: #003366;
+      padding: 0.5rem;
+    }
+    nav button {
+      background: #0059b3;
+      color: white;
+      border: none;
+      padding: 0.7rem 1.2rem;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .section {
+      display: none;
       padding: 2rem;
-    }
-    .card {
-      background: white;
-      border-radius: 15px;
-      padding: 1.5rem;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-    }
-    .card h2 {
-      margin-top: 0;
-      font-size: 1.2rem;
-      color: #004080;
-    }
-    .profile-pic {
-      width: 80px;
-      height: 80px;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 3px solid #004080;
-      margin-bottom: 10px;
-    }
-    input[type="file"] {
-      margin-top: 10px;
-    }
-    .chat-box, .ai-box {
-      height: 200px;
+      height: calc(100vh - 130px);
       overflow-y: auto;
-      border: 1px solid #ccc;
-      padding: 10px;
-      border-radius: 10px;
+    }
+    .active {
+      display: block;
     }
     .subject-bar {
-      background-color: #eee;
-      border-radius: 10px;
-      margin: 5px 0;
+      background-color: #ddd;
+      border-radius: 8px;
+      margin: 10px 0;
       overflow: hidden;
     }
     .subject-bar-inner {
-      height: 20px;
-      color: white;
+      height: 25px;
       padding-left: 10px;
-      font-size: 0.8rem;
       display: flex;
       align-items: center;
+      color: white;
+    }
+    .call-list {
+      list-style: none;
+      padding: 0;
+    }
+    .call-list li {
+      background: #e0efff;
+      margin: 10px 0;
+      padding: 1rem;
+      border-radius: 10px;
+    }
+    .call-list button {
+      margin-top: 10px;
     }
   </style>
 </head>
 <body>
+  <header>🎓 Student Dashboard</header>
 
-<header>
-  🎓 Student Dashboard
-</header>
+  <nav>
+    <button onclick="showSection('profile')">👤 Profile</button>
+    <button onclick="showSection('video')">🎥 Video Calls</button>
+    <button onclick="showSection('chat')">💬 Chat</button>
+    <button onclick="showSection('ai')">🤖 AI Assistant</button>
+    <button onclick="showSection('subjects')">📚 Subjects</button>
+  </nav>
 
-<div class="container">
-  <!-- 👤 Profile Section -->
-  <div class="card">
-    <h2>👤 Your Account</h2>
-    <img src="https://via.placeholder.com/80" class="profile-pic" id="avatarPreview" />
-    <br>
-    <input type="file" id="avatarInput" accept="image/*" />
+  <div id="profile" class="section active">
+    <h2>👤 Profile</h2>
+    <img src="https://via.placeholder.com/100" id="avatar" style="border-radius:50%">
+    <input type="file" onchange="updateAvatar(event)"><br><br>
     <p>Email: <span id="userEmail">student@school.edu</span></p>
-    <button onclick="logout()">Logout</button>
   </div>
 
-  <!-- 🎥 Video Call Section -->
-  <div class="card">
-    <h2>🎥 Video Call</h2>
-    <p>Join a call started by a teacher:</p>
-    <button onclick="joinCall()">Join Call</button>
+  <div id="video" class="section">
+    <h2>🎥 Join a Class Video Call</h2>
+    <ul class="call-list" id="callList">
+      <!-- Example entry -->
+      <li>
+        <strong>Math Class</strong><br>
+        Teacher: Mr. Smith<br>
+        <button onclick="joinCall('math123')">Join Call</button>
+      </li>
+    </ul>
   </div>
 
-  <!-- 💬 Chat with Online Users -->
-  <div class="card">
-    <h2>💬 Chat (1-on-1)</h2>
-    <div class="chat-box" id="onlineUsers">
-      <!-- Online users will appear here -->
+  <div id="chat" class="section">
+    <h2>💬 Online Chat</h2>
+    <div id="chatUsers">
+      <!-- Online users shown here -->
+      <p>No one online yet.</p>
     </div>
   </div>
 
-  <!-- 🤖 AI Assistant -->
-  <div class="card">
-    <h2>🤖 Ask AI for Help</h2>
-    <input type="text" id="aiQuestion" placeholder="Ask about Math, Science..." style="width: 100%;" />
+  <div id="ai" class="section">
+    <h2>🤖 AI Assistant</h2>
+    <input type="text" id="aiInput" placeholder="Ask about school work..." style="width: 100%">
     <button onclick="askAI()">Ask</button>
-    <div class="ai-box" id="aiResponse">
-      <!-- AI answers will appear here -->
-    </div>
+    <div id="aiResponse" style="margin-top:1rem"></div>
   </div>
 
-  <!-- 📚 Subject Tracker -->
-  <div class="card">
+  <div id="subjects" class="section">
     <h2>📚 Subject Strength</h2>
     <div class="subject-bar">
       <div class="subject-bar-inner" style="width: 85%; background: #4caf50;">Math: 85%</div>
@@ -123,42 +126,36 @@
     <div class="subject-bar">
       <div class="subject-bar-inner" style="width: 60%; background: #ff9800;">History: 60%</div>
     </div>
-    <div class="subject-bar">
-      <div class="subject-bar-inner" style="width: 50%; background: #f44336;">Geography: 50%</div>
-    </div>
   </div>
-</div>
 
-<!-- Firebase and Logic Placeholder -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-<script>
-  // TODO: Initialize Firebase and connect all sections
-  function joinCall() {
-    alert("Joining teacher's video call... (logic to be added)");
-  }
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.section').forEach(section => {
+        section.classList.remove('active');
+      });
+      document.getElementById(id).classList.add('active');
+    }
 
-  function askAI() {
-    const q = document.getElementById("aiQuestion").value;
-    document.getElementById("aiResponse").innerHTML = "Thinking...";
-    setTimeout(() => {
-      document.getElementById("aiResponse").innerHTML = "Here's a helpful answer about: <b>" + q + "</b>";
-    }, 1000);
-  }
+    function updateAvatar(event) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        document.getElementById("avatar").src = reader.result;
+      };
+      reader.readAsDataURL(event.target.files[0]);
+    }
 
-  function logout() {
-    alert("Logging out...");
-    // firebase.auth().signOut()...
-  }
+    function joinCall(callId) {
+      alert("Joining call ID: " + callId);
+      // You can add actual video call logic here (WebRTC or Jitsi)
+    }
 
-  document.getElementById("avatarInput").addEventListener("change", function (e) {
-    const reader = new FileReader();
-    reader.onload = function () {
-      document.getElementById("avatarPreview").src = reader.result;
-    };
-    reader.readAsDataURL(e.target.files[0]);
-  });
-</script>
+    function askAI() {
+      const q = document.getElementById("aiInput").value;
+      document.getElementById("aiResponse").innerHTML = "Thinking...";
+      setTimeout(() => {
+        document.getElementById("aiResponse").innerHTML = `Answer for: <strong>${q}</strong><br>This would be handled by an AI API.`;
+      }, 1000);
+    }
+  </script>
 </body>
 </html>
