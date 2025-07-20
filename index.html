@@ -1,197 +1,153 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Timetable Example</title>
-<style>
-  body { font-family: Arial, sans-serif; margin: 20px; }
-  .timetable-input { width: 150px; margin: 5px; }
-  #timetable-container { margin-top: 20px; }
-</style>
+  <title>Video Call with Firebase + WebRTC</title>
+  <style>
+    video {
+      width: 45%;
+      margin: 10px;
+      border: 2px solid #333;
+    }
+    button {
+      margin: 10px;
+      padding: 10px;
+    }
+  </style>
 </head>
 <body>
+  <h2>Video Call</h2>
+  <video id="localVideo" autoplay muted></video>
+  <video id="remoteVideo" autoplay></video><br>
+  <button onclick="createCall()">📞 Create Call</button>
+  <button onclick="joinCall()">📲 Join Call</button>
 
-<h2>School Timetable</h2>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
-<div id="auth-section">
-  <input id="email" placeholder="Email" type="email" /><br />
-  <input id="password" placeholder="Password" type="password" /><br />
-  <button id="signup-btn">Sign Up</button>
-  <button id="login-btn">Log In</button>
-  <button id="logout-btn" style="display:none;">Log Out</button>
-</div>
+  <script>
+    // 🧠 Replace with YOUR Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyD1-V0gtFVkCOOawjp8QOP1lghgbsEBe_A",
+  authDomain: "fire-e0f2d.firebaseapp.com",
+  projectId: "fire-e0f2d",
+  storageBucket: "fire-e0f2d.firebasestorage.app",
+  messagingSenderId: "665998494762",
+  appId: "1:665998494762:web:29ff4a01b2a4634ff78753",
+  measurementId: "G-CDRH6QHQ92"
+};
+    firebase.initializeApp(firebaseConfig);
+    const firestore = firebase.firestore();
 
-<div id="timetable-container" style="display:none;">
-  <h3>Edit Timetable</h3>
-  <table border="1" cellpadding="5">
-    <thead>
-      <tr><th>Day</th><th>Period 1</th><th>Period 2</th><th>Period 3</th><th>Period 4</th><th>Period 5</th></tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>Mon</td>
-        <td><input type="text" class="timetable-input" data-day="Mon" data-period="1" /></td>
-        <td><input type="text" class="timetable-input" data-day="Mon" data-period="2" /></td>
-        <td><input type="text" class="timetable-input" data-day="Mon" data-period="3" /></td>
-        <td><input type="text" class="timetable-input" data-day="Mon" data-period="4" /></td>
-        <td><input type="text" class="timetable-input" data-day="Mon" data-period="5" /></td>
-      </tr>
-      <tr>
-        <td>Tue</td>
-        <td><input type="text" class="timetable-input" data-day="Tue" data-period="1" /></td>
-        <td><input type="text" class="timetable-input" data-day="Tue" data-period="2" /></td>
-        <td><input type="text" class="timetable-input" data-day="Tue" data-period="3" /></td>
-        <td><input type="text" class="timetable-input" data-day="Tue" data-period="4" /></td>
-        <td><input type="text" class="timetable-input" data-day="Tue" data-period="5" /></td>
-      </tr>
-      <tr>
-        <td>Wed</td>
-        <td><input type="text" class="timetable-input" data-day="Wed" data-period="1" /></td>
-        <td><input type="text" class="timetable-input" data-day="Wed" data-period="2" /></td>
-        <td><input type="text" class="timetable-input" data-day="Wed" data-period="3" /></td>
-        <td><input type="text" class="timetable-input" data-day="Wed" data-period="4" /></td>
-        <td><input type="text" class="timetable-input" data-day="Wed" data-period="5" /></td>
-      </tr>
-      <tr>
-        <td>Thu</td>
-        <td><input type="text" class="timetable-input" data-day="Thu" data-period="1" /></td>
-        <td><input type="text" class="timetable-input" data-day="Thu" data-period="2" /></td>
-        <td><input type="text" class="timetable-input" data-day="Thu" data-period="3" /></td>
-        <td><input type="text" class="timetable-input" data-day="Thu" data-period="4" /></td>
-        <td><input type="text" class="timetable-input" data-day="Thu" data-period="5" /></td>
-      </tr>
-      <tr>
-        <td>Fri</td>
-        <td><input type="text" class="timetable-input" data-day="Fri" data-period="1" /></td>
-        <td><input type="text" class="timetable-input" data-day="Fri" data-period="2" /></td>
-        <td><input type="text" class="timetable-input" data-day="Fri" data-period="3" /></td>
-        <td><input type="text" class="timetable-input" data-day="Fri" data-period="4" /></td>
-        <td><input type="text" class="timetable-input" data-day="Fri" data-period="5" /></td>
-      </tr>
-    </tbody>
-  </table>
-  <button id="save-timetable-btn">Save Timetable</button>
-</div>
+    const servers = {
+      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+    };
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    const pc = new RTCPeerConnection(servers);
+    const localVideo = document.getElementById('localVideo');
+    const remoteVideo = document.getElementById('remoteVideo');
 
-<script>
-  // Your Firebase config
-  const firebaseConfig = {
-    apiKey: "AIzaSyAHSxenlPZD8veD-iZ6pJIOVRbuTD2dw0Q",
-    authDomain: "learn-3f43b.firebaseapp.com",
-    databaseURL: "https://learn-3f43b-default-rtdb.firebaseio.com",
-    projectId: "learn-3f43b",
-    storageBucket: "learn-3f43b.firebasestorage.app",
-    messagingSenderId: "54412751232",
-    appId: "1:54412751232:web:31fe8e2f8b5cc03d409165",
-    measurementId: "G-7HRKXL1EPS"
-  };
+    let localStream;
+    let remoteStream = new MediaStream();
 
-  // Initialize Firebase
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.database();
-
-  const emailInput = document.getElementById('email');
-  const passwordInput = document.getElementById('password');
-  const signupBtn = document.getElementById('signup-btn');
-  const loginBtn = document.getElementById('login-btn');
-  const logoutBtn = document.getElementById('logout-btn');
-  const timetableContainer = document.getElementById('timetable-container');
-  const saveTimetableBtn = document.getElementById('save-timetable-btn');
-
-  signupBtn.onclick = () => {
-    const email = emailInput.value.trim();
-    const pass = passwordInput.value.trim();
-    if (!email || !pass) return alert('Email and password required');
-    auth.createUserWithEmailAndPassword(email, pass)
-      .then(() => alert('Signed up!'))
-      .catch(e => alert('Error: ' + e.message));
-  };
-
-  loginBtn.onclick = () => {
-    const email = emailInput.value.trim();
-    const pass = passwordInput.value.trim();
-    if (!email || !pass) return alert('Email and password required');
-    auth.signInWithEmailAndPassword(email, pass)
-      .catch(e => alert('Error: ' + e.message));
-  };
-
-  logoutBtn.onclick = () => {
-    auth.signOut();
-  };
-
-  auth.onAuthStateChanged(user => {
-    if (user) {
-      emailInput.style.display = 'none';
-      passwordInput.style.display = 'none';
-      signupBtn.style.display = 'none';
-      loginBtn.style.display = 'none';
-      logoutBtn.style.display = 'inline-block';
-      timetableContainer.style.display = 'block';
-      loadTimetable();
-    } else {
-      emailInput.style.display = 'inline-block';
-      passwordInput.style.display = 'inline-block';
-      signupBtn.style.display = 'inline-block';
-      loginBtn.style.display = 'inline-block';
-      logoutBtn.style.display = 'none';
-      timetableContainer.style.display = 'none';
-      clearTimetableInputs();
-    }
-  });
-
-  saveTimetableBtn.onclick = () => {
-    saveTimetable();
-  };
-
-  function saveTimetable() {
-    const user = auth.currentUser;
-    if (!user) return alert('Not logged in');
-
-    const timetableData = {};
-    document.querySelectorAll('.timetable-input').forEach(input => {
-      const day = input.dataset.day;
-      const period = input.dataset.period;
-      if (!timetableData[day]) timetableData[day] = {};
-      timetableData[day][period] = input.value.trim();
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
+      localStream = stream;
+      localVideo.srcObject = localStream;
+      localStream.getTracks().forEach(track => {
+        pc.addTrack(track, localStream);
+      });
     });
 
-    db.ref('timetables/' + user.uid).set(timetableData)
-      .then(() => alert('Timetable saved!'))
-      .catch(e => alert('Error saving timetable: ' + e.message));
-  }
-
-  function loadTimetable() {
-    const user = auth.currentUser;
-    if (!user) return;
-
-    db.ref('timetables/' + user.uid).get()
-      .then(snapshot => {
-        if (!snapshot.exists()) {
-          clearTimetableInputs();
-          return;
-        }
-        const data = snapshot.val();
-        document.querySelectorAll('.timetable-input').forEach(input => {
-          const day = input.dataset.day;
-          const period = input.dataset.period;
-          input.value = data[day] && data[day][period] ? data[day][period] : '';
-        });
-      })
-      .catch(e => {
-        alert('Error loading timetable: ' + e.message);
+    pc.ontrack = event => {
+      event.streams[0].getTracks().forEach(track => {
+        remoteStream.addTrack(track);
       });
-  }
+      remoteVideo.srcObject = remoteStream;
+    };
 
-  function clearTimetableInputs() {
-    document.querySelectorAll('.timetable-input').forEach(input => input.value = '');
-  }
-</script>
+    pc.onicecandidate = event => {
+      if (event.candidate) {
+        sendIceCandidate(event.candidate);
+      }
+    };
 
+    let callDoc, offerCandidates, answerCandidates;
+
+    async function createCall() {
+      callDoc = firestore.collection('calls').doc();
+      offerCandidates = callDoc.collection('offerCandidates');
+      answerCandidates = callDoc.collection('answerCandidates');
+
+      const offerDescription = await pc.createOffer();
+      await pc.setLocalDescription(offerDescription);
+
+      const offer = {
+        sdp: offerDescription.sdp,
+        type: offerDescription.type
+      };
+      await callDoc.set({ offer });
+
+      callDoc.onSnapshot(snapshot => {
+        const data = snapshot.data();
+        if (!pc.currentRemoteDescription && data?.answer) {
+          const answerDesc = new RTCSessionDescription(data.answer);
+          pc.setRemoteDescription(answerDesc);
+        }
+      });
+
+      answerCandidates.onSnapshot(snapshot => {
+        snapshot.docChanges().forEach(change => {
+          if (change.type === 'added') {
+            const candidate = new RTCIceCandidate(change.doc.data());
+            pc.addIceCandidate(candidate);
+          }
+        });
+      });
+
+      alert(`Share this call ID with your friend: ${callDoc.id}`);
+    }
+
+    async function joinCall() {
+      const callId = prompt("Enter call ID:");
+      callDoc = firestore.collection('calls').doc(callId);
+      offerCandidates = callDoc.collection('offerCandidates');
+      answerCandidates = callDoc.collection('answerCandidates');
+
+      const callData = (await callDoc.get()).data();
+      const offerDescription = callData.offer;
+      await pc.setRemoteDescription(new RTCSessionDescription(offerDescription));
+
+      const answerDescription = await pc.createAnswer();
+      await pc.setLocalDescription(answerDescription);
+
+      const answer = {
+        type: answerDescription.type,
+        sdp: answerDescription.sdp
+      };
+      await callDoc.update({ answer });
+
+      offerCandidates.onSnapshot(snapshot => {
+        snapshot.docChanges().forEach(change => {
+          if (change.type === 'added') {
+            const data = change.doc.data();
+            pc.addIceCandidate(new RTCIceCandidate(data));
+          }
+        });
+      });
+
+      answerCandidates.onSnapshot(snapshot => {
+        // not needed here
+      });
+    }
+
+    async function sendIceCandidate(candidate) {
+      const candidateData = candidate.toJSON();
+      if (offerCandidates && !answerCandidates) {
+        await offerCandidates.add(candidateData);
+      } else if (answerCandidates) {
+        await answerCandidates.add(candidateData);
+      }
+    }
+  </script>
 </body>
 </html>
