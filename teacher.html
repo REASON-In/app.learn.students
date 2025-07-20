@@ -1,47 +1,60 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Teacher - Create Call</title>
+  <meta charset="UTF-8" />
+  <title>Teacher Dashboard</title>
+  <style>
+    body {
+      background-color: #e2e8f0;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 50px;
+    }
+    button {
+      padding: 12px 24px;
+      font-size: 18px;
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #1e40af;
+    }
+  </style>
 </head>
 <body>
-  <h2>Teacher - Start Video Call</h2>
-  <input id="classNameInput" placeholder="Enter Class Name" />
-  <button onclick="createCall()">Start Call</button>
-  <p id="status"></p>
+  <h1>Welcome, Teacher 👩‍🏫</h1>
+  <button onclick="createVideoCall()">Start Video Call</button>
 
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
   <script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyAHSxenlPZD8veD-iZ6pJIOVRbuTD2dw0Q",
-    authDomain: "learn-3f43b.firebaseapp.com",
-    databaseURL: "https://learn-3f43b-default-rtdb.firebaseio.com",
-    projectId: "learn-3f43b",
-    storageBucket: "learn-3f43b.firebasestorage.app",
-    messagingSenderId: "54412751232",
-    appId: "1:54412751232:web:31fe8e2f8b5cc03d409165",
-    measurementId: "G-7HRKXL1EPS"
-  };
+    const firebaseConfig = {
+      apiKey: "AIzaSyAHSxenlPZD8veD-iZ6pJIOVRbuTD2dw0Q",
+      authDomain: "learn-3f43b.firebaseapp.com",
+      databaseURL: "https://learn-3f43b-default-rtdb.firebaseio.com",
+      projectId: "learn-3f43b",
+      storageBucket: "learn-3f43b.appspot.com",
+      messagingSenderId: "54412751232",
+      appId: "1:54412751232:web:31fe8e2f8b5cc03d409165"
+    };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    async function createCall() {
-      const className = document.getElementById("classNameInput").value;
-      if (!className) return alert("Please enter class name");
-
+    function createVideoCall() {
       const callRef = db.ref("calls").push();
       const callId = callRef.key;
-
-      await callRef.set({
-        className: className,
-        timestamp: Date.now()
+      callRef.set({
+        createdAt: Date.now(),
+        by: "teacher"
+      }).then(() => {
+        window.location.href = `video.html?callId=${callId}`;
       });
-
-      document.getElementById("status").innerText = `Call created. Share with students or wait for join.`;
-
-      window.location.href = `video.html?callId=${callId}&role=teacher`;
     }
   </script>
 </body>
 </html>
+
