@@ -85,35 +85,29 @@
   </div>
 
   <script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyAHSxenlPZD8veD-iZ6pJIOVRbuTD2dw0Q",
-    authDomain: "learn-3f43b.firebaseapp.com",
-    databaseURL: "https://learn-3f43b-default-rtdb.firebaseio.com",
-    projectId: "learn-3f43b",
-    storageBucket: "learn-3f43b.firebasestorage.app",
-    messagingSenderId: "54412751232",
-    appId: "1:54412751232:web:31fe8e2f8b5cc03d409165",
-    measurementId: "G-7HRKXL1EPS"
-  };
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const auth = firebase.auth();
 
     let userUID = null;
 
-function loginWithGoogle() {
-  const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider)
-    .then(result => {
-      userUID = result.user.uid;
-      document.getElementById("login-section").style.display = "none";
-      renderTimetableInputs();
-    })
-    .catch(error => {
-      alert("Login failed: " + error.message);
-      console.error(error);
-    });
-}
+    function loginWithGoogle() {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider).then(result => {
+        userUID = result.user.uid;
+        document.getElementById("login-section").style.display = "none";
+        renderTimetableInputs();
+      });
+    }
 
     function renderTimetableInputs() {
       const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
@@ -121,9 +115,9 @@ function loginWithGoogle() {
       tbody.innerHTML = "";
       days.forEach(day => {
         const row = document.createElement("tr");
-        let html = <td>${day}</td>;
+        let html = `<td>${day}</td>`;
         for (let i = 0; i < 5; i++) {
-          html += <td><input placeholder='Subject' /></td><td><input type='time' /></td>;
+          html += `<td><input placeholder='Subject' /></td><td><input type='time' /></td>`;
         }
         row.innerHTML = html;
         tbody.appendChild(row);
@@ -145,7 +139,7 @@ function loginWithGoogle() {
         }
       });
       if (!allFilled) return alert("Please fill in all subjects and times.");
-      db.ref(timetables/${userUID}).set(timetable);
+      db.ref(`timetables/${userUID}`).set(timetable);
       document.getElementById("timetable-modal").style.display = "none";
       document.getElementById("main-ui").classList.remove("hidden");
       animatePeriodCountdown(timetable);
@@ -180,9 +174,9 @@ function loginWithGoogle() {
           const hrs = String(Math.floor(diff / 3600000)).padStart(2, '0');
           const mins = String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0');
           const secs = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
-          nextEl.innerText = Next: ${next.subject} at ${next.time} ⏳ ${hrs}:${mins}:${secs};
+          nextEl.innerText = `Next: ${next.subject} at ${next.time} ⏳ ${hrs}:${mins}:${secs}`;
         } else {
-          nextEl.innerText = ✅ No more periods today!;
+          nextEl.innerText = `✅ No more periods today!`;
         }
       }, 1000);
     }
