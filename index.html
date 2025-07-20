@@ -1,23 +1,25 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Video Call with Firebase + WebRTC</title>
+  <title>🔥 Simple Video Call</title>
   <style>
     video {
       width: 45%;
       margin: 10px;
-      border: 2px solid #333;
+      border: 2px solid #444;
     }
     button {
       margin: 10px;
       padding: 10px;
+      font-size: 16px;
     }
   </style>
 </head>
 <body>
-  <h2>Video Call</h2>
-  <video id="localVideo" autoplay muted></video>
-  <video id="remoteVideo" autoplay></video><br>
+  <h2>🔥 Video Calling with Firebase</h2>
+  <video id="localVideo" autoplay playsinline muted></video>
+  <video id="remoteVideo" autoplay playsinline></video><br>
+
   <button onclick="createCall()">📞 Create Call</button>
   <button onclick="joinCall()">📲 Join Call</button>
 
@@ -26,7 +28,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
   <script>
-    // 🧠 Replace with YOUR Firebase config
+    // ✅ REPLACE WITH YOUR OWN FIREBASE CONFIG:
 const firebaseConfig = {
   apiKey: "AIzaSyD1-V0gtFVkCOOawjp8QOP1lghgbsEBe_A",
   authDomain: "fire-e0f2d.firebaseapp.com",
@@ -36,25 +38,28 @@ const firebaseConfig = {
   appId: "1:665998494762:web:29ff4a01b2a4634ff78753",
   measurementId: "G-CDRH6QHQ92"
 };
+
     firebase.initializeApp(firebaseConfig);
     const firestore = firebase.firestore();
 
     const servers = {
-      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+      iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
     };
 
     const pc = new RTCPeerConnection(servers);
-    const localVideo = document.getElementById('localVideo');
-    const remoteVideo = document.getElementById('remoteVideo');
-
     let localStream;
     let remoteStream = new MediaStream();
 
+    const localVideo = document.getElementById("localVideo");
+    const remoteVideo = document.getElementById("remoteVideo");
+
+    // 🔄 Setup local camera
     navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
       localStream = stream;
-      localVideo.srcObject = localStream;
-      localStream.getTracks().forEach(track => {
-        pc.addTrack(track, localStream);
+      localVideo.srcObject = stream;
+
+      stream.getTracks().forEach(track => {
+        pc.addTrack(track, stream);
       });
     });
 
@@ -67,86 +72,74 @@ const firebaseConfig = {
 
     pc.onicecandidate = event => {
       if (event.candidate) {
-        sendIceCandidate(event.candidate);
+        const json = event.candidate.toJSON();
+        if (callDoc && role === "caller") {
+          offerCandidates.add(json);
+        } else if (callDoc && role === "callee") {
+          answerCandidates.add(json);
+        }
       }
     };
 
     let callDoc, offerCandidates, answerCandidates;
+    let role = "";
 
     async function createCall() {
-      callDoc = firestore.collection('calls').doc();
-      offerCandidates = callDoc.collection('offerCandidates');
-      answerCandidates = callDoc.collection('answerCandidates');
+      role = "caller";
+      callDoc = firestore.collection("calls").doc();
+      offerCandidates = callDoc.collection("offerCandidates");
+      answerCandidates = callDoc.collection("answerCandidates");
 
-      const offerDescription = await pc.createOffer();
-      await pc.setLocalDescription(offerDescription);
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
 
-      const offer = {
-        sdp: offerDescription.sdp,
-        type: offerDescription.type
-      };
-      await callDoc.set({ offer });
+      const callData = { offer: { type: offer.type, sdp: offer.sdp } };
+      await callDoc.set(callData);
 
       callDoc.onSnapshot(snapshot => {
         const data = snapshot.data();
         if (!pc.currentRemoteDescription && data?.answer) {
-          const answerDesc = new RTCSessionDescription(data.answer);
-          pc.setRemoteDescription(answerDesc);
+          pc.setRemoteDescription(new RTCSessionDescription(data.answer));
         }
       });
 
       answerCandidates.onSnapshot(snapshot => {
         snapshot.docChanges().forEach(change => {
-          if (change.type === 'added') {
+          if (change.type === "added") {
             const candidate = new RTCIceCandidate(change.doc.data());
             pc.addIceCandidate(candidate);
           }
         });
       });
 
-      alert(`Share this call ID with your friend: ${callDoc.id}`);
+      alert(`Share this Call ID: ${callDoc.id}`);
     }
 
     async function joinCall() {
-      const callId = prompt("Enter call ID:");
-      callDoc = firestore.collection('calls').doc(callId);
-      offerCandidates = callDoc.collection('offerCandidates');
-      answerCandidates = callDoc.collection('answerCandidates');
+      role = "callee";
+      const callId = prompt("Enter Call ID:");
+      callDoc = firestore.collection("calls").doc(callId);
+      offerCandidates = callDoc.collection("offerCandidates");
+      answerCandidates = callDoc.collection("answerCandidates");
 
       const callData = (await callDoc.get()).data();
-      const offerDescription = callData.offer;
-      await pc.setRemoteDescription(new RTCSessionDescription(offerDescription));
 
-      const answerDescription = await pc.createAnswer();
-      await pc.setLocalDescription(answerDescription);
+      await pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
 
-      const answer = {
-        type: answerDescription.type,
-        sdp: answerDescription.sdp
-      };
-      await callDoc.update({ answer });
+      await callDoc.update({ answer: { type: answer.type, sdp: answer.sdp } });
 
       offerCandidates.onSnapshot(snapshot => {
         snapshot.docChanges().forEach(change => {
-          if (change.type === 'added') {
+          if (change.type === "added") {
             const data = change.doc.data();
             pc.addIceCandidate(new RTCIceCandidate(data));
           }
         });
       });
 
-      answerCandidates.onSnapshot(snapshot => {
-        // not needed here
-      });
-    }
-
-    async function sendIceCandidate(candidate) {
-      const candidateData = candidate.toJSON();
-      if (offerCandidates && !answerCandidates) {
-        await offerCandidates.add(candidateData);
-      } else if (answerCandidates) {
-        await answerCandidates.add(candidateData);
-      }
+      answerCandidates.onSnapshot(() => {});
     }
   </script>
 </body>
