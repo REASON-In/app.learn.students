@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Teacher Dashboard</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f1f5f9;
+      padding: 20px;
+    }
+    header {
+      background: #1e293b;
+      padding: 12px 24px;
+      color: white;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      margin-bottom: 30px;
+    }
+    h2 {
+      margin: 0;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 30px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: 600;
+    }
+    input[type="text"], input[type="number"], input[type="url"] {
+      width: 100%;
+      padding: 8px 10px;
+      margin-top: 6px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+    }
+    button {
+      margin-top: 20px;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      font-weight: bold;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #2563eb;
+    }
+    #message {
+      margin-top: 15px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h2>👩‍🏫 Teacher Dashboard</h2>
+    <p id="teacherEmail" style="color: #a5b4fc;"></p>
+  </header>
+
+  <div class="card">
+    <h3>Give Points to Student</h3>
+    <label for="studentUid">Student UID</label>
+    <input type="text" id="studentUid" placeholder="Enter Student UID" />
+    
+    <label for="subject">Subject</label>
+    <input type="text" id="subject" placeholder="Enter Subject Name" />
+    
+    <label for="points">Points (0-100)</label>
+    <input type="number" id="points" min="0" max="100" />
+    
+    <button onclick="submitPoints()">Submit Points</button>
+    <p id="pointsMessage"></p>
+  </div>
+
+  <div class="card">
+    <h3>Create a Video Call</h3>
+    <label for="className">Class Name</label>
+    <input type="text" id="className" placeholder="Enter Class Name" />
+    
+    <label for="callLink">Call Link (Zoom, Meet, etc.)</label>
+    <input type="url" id="callLink" placeholder="Enter Call Link" />
+    
+    <button onclick="createCall()">Create Call</button>
+    <p id="callMessage"></p>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyAHSxenlPZD8veD-iZ6pJIOVRbuTD2dw0Q",
+      authDomain: "learn-3f43b.firebaseapp.com",
+      databaseURL: "https://learn-3f43b-default-rtdb.firebaseio.com",
+      projectId: "learn-3f43b",
+      storageBucket: "learn-3f43b.firebasestorage.app",
+      messagingSenderId: "54412751232",
+      appId: "1:54412751232:web:31fe8e2f8b5cc03d409165",
+      measurementId: "G-7HRKXL1EPS"
+    };
+    firebase.initializeApp(firebaseConfig);
+
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    let teacherName = '';
+    let teacherEmail = '';
+
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        teacherEmail = user.email;
+        teacherName = user.displayName || user.email.split('@')[0];
+        document.getElementById('teacherEmail').innerText = `Logged in as: ${teacherEmail}`;
+      } else {
+        alert("Please sign in to access the teacher dashboard.");
+        // redirect to login or block further action
+      }
+    });
+
+    function submitPoints() {
+      const studentUid = document.getElementById('studentUid').value.trim();
+      const subject = document.getElementById('subject').value.trim();
+      const points = Number(document.getElementById('points').value);
+
+      const msgElem = document.getElementById('pointsMessage');
+      msgElem.style.color = 'red';
+
+      if (!studentUid) {
+        msgElem.innerText = "Student UID is required.";
+        return;
+      }
+      if (!subject) {
+        msgElem.innerText = "Subject is required.";
+        return;
+      }
+      if (isNaN(points) || points < 0 || points > 100) {
+        msgElem.innerText = "Points must be a number between 0 and 100.";
+        return;
+      }
+
+      // Save the score in db: scores/{studentUid}/{subject} = [list of scores]
+      const scoresRef = db.ref(`scores/${studentUid}/${subject}`);
+
+      scoresRef.once('value').then(snapshot => {
+        let currentScores = snapshot.val() || [];
+        currentScores.push(points);
+
+        scoresRef.set(currentScores)
+          .then(() => {
+            msgElem.style.color = 'green';
+            msgElem.innerText = `Points added for student ${studentUid} in subject ${subject}.`;
+            // Clear inputs
+            document.getElementById('subject').value = '';
+            document.getElementById('points').value = '';
+          })
+          .catch(err => {
+            msgElem.innerText = "Failed to add points: " + err.message;
+          });
+      }).catch(err => {
+        msgElem.innerText = "Failed to read existing scores: " + err.message;
+      });
+    }
+
+    function createCall() {
+      const className = document.getElementById('className').value.trim();
+      const callLink = document.getElementById('callLink').value.trim();
+      const msgElem = document.getElementById('callMessage');
+      msgElem.style.color = 'red';
+
+      if (!className) {
+        msgElem.innerText = "Class name is required.";
+        return;
+      }
+      if (!callLink) {
+        msgElem.innerText = "Call link is required.";
+        return;
+      }
+
+      // Push a new call into 'calls' node with a unique ID
+      const newCallRef = db.ref('calls').push();
+
+      newCallRef.set({
+        className,
+        teacher: teacherName,
+        link: callLink
+      })
+      .then(() => {
+        msgElem.style.color = 'green';
+        msgElem.innerText = `Video call created for class "${className}".`;
+        document.getElementById('className').value = '';
+        document.getElementById('callLink').value = '';
+      })
+      .catch(err => {
+        msgElem.innerText = "Failed to create call: " + err.message;
+      });
+    }
+  </script>
+</body>
+</html>
