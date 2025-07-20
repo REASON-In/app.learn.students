@@ -1,60 +1,139 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8" />
-  <title>Teacher Dashboard</title>
-  <style>
-    body {
-      background-color: #e2e8f0;
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding: 50px;
-    }
-    button {
-      padding: 12px 24px;
-      font-size: 18px;
-      background-color: #2563eb;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #1e40af;
-    }
-  </style>
+  <title>Teacher - Start Call</title>
 </head>
 <body>
-  <h1>Welcome, Teacher 👩‍🏫</h1>
-  <button onclick="createVideoCall()">Start Video Call</button>
+  <h1>Teacher Video Call</h1>
+  <button id="startCallBtn">Start Call</button>
+  <div id="videos"></div>
 
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
   <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyAHSxenlPZD8veD-iZ6pJIOVRbuTD2dw0Q",
-      authDomain: "learn-3f43b.firebaseapp.com",
-      databaseURL: "https://learn-3f43b-default-rtdb.firebaseio.com",
-      projectId: "learn-3f43b",
-      storageBucket: "learn-3f43b.appspot.com",
-      messagingSenderId: "54412751232",
-      appId: "1:54412751232:web:31fe8e2f8b5cc03d409165"
-    };
+    // Your Firebase config here
+  const firebaseConfig = {
+    apiKey: "AIzaSyAHSxenlPZD8veD-iZ6pJIOVRbuTD2dw0Q",
+    authDomain: "learn-3f43b.firebaseapp.com",
+    databaseURL: "https://learn-3f43b-default-rtdb.firebaseio.com",
+    projectId: "learn-3f43b",
+    storageBucket: "learn-3f43b.firebasestorage.app",
+    messagingSenderId: "54412751232",
+    appId: "1:54412751232:web:31fe8e2f8b5cc03d409165",
+    measurementId: "G-7HRKXL1EPS"
+  };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    function createVideoCall() {
-      const callRef = db.ref("calls").push();
-      const callId = callRef.key;
-      callRef.set({
-        createdAt: Date.now(),
-        by: "teacher"
-      }).then(() => {
-        window.location.href = `video.html?callId=${callId}`;
+    const startCallBtn = document.getElementById('startCallBtn');
+    const videosDiv = document.getElementById('videos');
+
+    let callId = null;
+    let localStream = null;
+    let peers = {};
+
+    async function startCall() {
+      // Create unique call ID (simple timestamp)
+      callId = "call-" + Date.now();
+
+      // Save call info in Firebase
+      await db.ref('calls/' + callId).set({
+        by: 'Teacher',
+        startedAt: Date.now()
       });
+
+      // Get user media (mic + cam)
+      try {
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        addVideoStream('Me (Teacher)', localStream);
+
+        // Listen for new users joining this call
+        db.ref('calls/' + callId + '/participants').on('child_added', snapshot => {
+          const studentId = snapshot.key;
+          if (studentId === 'teacher') return; // skip teacher entry if exists
+          if (peers[studentId]) return; // already connected
+
+          createPeerConnection(studentId);
+        });
+
+        // Add teacher as participant in the call
+        db.ref('calls/' + callId + '/participants/teacher').set(true);
+
+      } catch (e) {
+        alert('Could not get camera and mic: ' + e.message);
+      }
     }
+
+    function addVideoStream(name, stream) {
+      const container = document.createElement('div');
+      container.style.border = '1px solid black';
+      container.style.margin = '5px';
+      container.style.padding = '5px';
+
+      const label = document.createElement('p');
+      label.innerText = name;
+
+      const video = document.createElement('video');
+      video.autoplay = true;
+      video.playsInline = true;
+      video.srcObject = stream;
+
+      container.appendChild(label);
+      container.appendChild(video);
+      videosDiv.appendChild(container);
+    }
+
+    // Signaling helpers (simplified)
+    async function createPeerConnection(studentId) {
+      const peerConnection = new RTCPeerConnection();
+
+      // Add teacher local tracks to peer connection
+      localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+      // When remote track arrives, show video
+      peerConnection.ontrack = (event) => {
+        if (!peers[studentId].remoteStream) {
+          peers[studentId].remoteStream = new MediaStream();
+          addVideoStream("Student " + studentId, peers[studentId].remoteStream);
+        }
+        event.streams[0].getTracks().forEach(track => {
+          peers[studentId].remoteStream.addTrack(track);
+        });
+      };
+
+      // ICE candidates handling
+      peerConnection.onicecandidate = event => {
+        if (event.candidate) {
+          db.ref(`calls/${callId}/iceCandidates/${studentId}/teacher`).push(event.candidate.toJSON());
+        }
+      };
+
+      // Listen for ICE candidates from student
+      db.ref(`calls/${callId}/iceCandidates/${studentId}/student`).on('child_added', snapshot => {
+        const candidate = new RTCIceCandidate(snapshot.val());
+        peerConnection.addIceCandidate(candidate).catch(console.error);
+      });
+
+      // Create and send offer
+      const offer = await peerConnection.createOffer();
+      await peerConnection.setLocalDescription(offer);
+      await db.ref(`calls/${callId}/offers/${studentId}`).set(offer.toJSON());
+
+      // Listen for answer from student
+      db.ref(`calls/${callId}/answers/${studentId}`).on('value', async snapshot => {
+        if (!snapshot.exists()) return;
+        const answer = snapshot.val();
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+      });
+
+      peers[studentId] = { peerConnection };
+    }
+
+    startCallBtn.onclick = () => {
+      startCallBtn.disabled = true;
+      startCall();
+    };
   </script>
 </body>
 </html>
-
