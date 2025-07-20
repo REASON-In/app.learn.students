@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>School App - Google Login</title>
+  <title>School App Login</title>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
@@ -11,7 +11,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      margin-top: 60px;
+      margin-top: 40px;
     }
     h2 {
       margin-bottom: 10px;
@@ -22,7 +22,6 @@
       border-radius: 15px;
       width: 300px;
       box-shadow: 0 0 10px #00000044;
-      text-align: center;
     }
     input, select, button {
       width: 100%;
@@ -47,24 +46,23 @@
 <body>
 
   <div class="box">
-    <h2>Login with Google</h2>
-    <button onclick="signInWithGoogle()">Sign in with Google</button>
-
-    <div id="extraForm" style="display:none;">
-      <input id="username" type="text" placeholder="Choose a Username" required />
-      <select id="role">
-        <option value="student">Student</option>
-        <option value="teacher">Teacher</option>
-      </select>
-      <button onclick="finishSetup()">Continue</button>
-    </div>
+    <h2>School App Login</h2>
+    <button onclick="signInWithGoogle()">Sign In with Google</button>
+    <input id="username" type="text" placeholder="Enter Username" required />
+    <input id="password" type="password" placeholder="Enter School Password" required />
+    <select id="role">
+      <option value="student">Student</option>
+      <option value="teacher">Teacher</option>
+    </select>
+    <button onclick="submitDetails()">Continue</button>
+    <button onclick="justExplore()">Just Explore</button>
   </div>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
   <script>
-    // Your Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyAHSxenlPZD8veD-iZ6pJIOVRbuTD2dw0Q",
       authDomain: "learn-3f43b.firebaseapp.com",
@@ -79,51 +77,47 @@
     const auth = firebase.auth();
     const db = firebase.database();
 
-    let currentUID = null;
+    let currentUserUID = null;
 
-    async function signInWithGoogle() {
+    function signInWithGoogle() {
       const provider = new firebase.auth.GoogleAuthProvider();
-      try {
-        const result = await auth.signInWithPopup(provider);
-        const user = result.user;
-        const email = user.email;
-
-        // ✅ Only allow emails from your school
-        const domain = email.split('@')[1];
-        if (domain !== "school.edu") {
-          alert("Access denied: only school emails allowed.");
-          await auth.signOut();
-          return;
-        }
-
-        currentUID = user.uid;
-        const userRef = await db.ref("users/" + currentUID).get();
-        if (userRef.exists()) {
-          const role = userRef.val().role;
-          window.location.href = role === "teacher" ? "teacher.html" : "student.html";
-        } else {
-          document.getElementById("extraForm").style.display = "block";
-        }
-      } catch (err) {
-        alert("Google Sign-In Error: " + err.message);
-      }
+      auth.signInWithPopup(provider).then((result) => {
+        currentUserUID = result.user.uid;
+        alert("Signed in with Google. Now enter username and password.");
+      }).catch((error) => {
+        alert("Google sign-in error: " + error.message);
+      });
     }
 
-    async function finishSetup() {
-      const username = document.getElementById("username").value.trim();
+    async function submitDetails() {
+      const username = document.getElementById("username").value;
+      const password = document.getElementById("password").value;
       const role = document.getElementById("role").value;
 
-      if (!username) {
-        alert("Please enter a username.");
+      if (!currentUserUID) {
+        alert("Please sign in with Google first.");
+        return;
+      }
+
+      const validStudent = role === "student" && password === "Student123";
+      const validTeacher = role === "teacher" && password === "Teacher456";
+
+      if (!validStudent && !validTeacher) {
+        alert("Invalid password for role " + role);
         return;
       }
 
       try {
-        await db.ref("users/" + currentUID).set({ username, role });
-        window.location.href = role === "teacher" ? "teacher.html" : "student.html";
-      } catch (err) {
-        alert("Error saving user: " + err.message);
+        await db.ref("users/" + currentUserUID).set({ username, role });
+        alert("Welcome " + username + "!");
+        location.href = role === "teacher" ? "teacher.html" : "student.html";
+      } catch (error) {
+        alert("Error saving user: " + error.message);
       }
+    }
+
+    function justExplore() {
+      location.href = "explore.html";
     }
   </script>
 </body>
