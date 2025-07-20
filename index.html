@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🔥 Simple Video Call</title>
+  <title>Video Call with Realtime DB</title>
   <style>
     video {
       width: 45%;
@@ -11,13 +11,12 @@
     button {
       margin: 10px;
       padding: 10px;
-      font-size: 16px;
     }
   </style>
 </head>
 <body>
-  <h2>🔥 Video Calling with Firebase</h2>
-  <video id="localVideo" autoplay playsinline muted></video>
+  <h2>Video Call (Realtime DB)</h2>
+  <video id="localVideo" autoplay muted playsinline></video>
   <video id="remoteVideo" autoplay playsinline></video><br>
 
   <button onclick="createCall()">📞 Create Call</button>
@@ -25,10 +24,10 @@
 
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 
   <script>
-    // ✅ REPLACE WITH YOUR OWN FIREBASE CONFIG:
+    // ✅ Replace with YOUR Firebase config:
 const firebaseConfig = {
   apiKey: "AIzaSyD1-V0gtFVkCOOawjp8QOP1lghgbsEBe_A",
   authDomain: "fire-e0f2d.firebaseapp.com",
@@ -40,106 +39,97 @@ const firebaseConfig = {
 };
 
     firebase.initializeApp(firebaseConfig);
-    const firestore = firebase.firestore();
+    const db = firebase.database();
 
-    const servers = {
-      iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
-    };
+    const pc = new RTCPeerConnection({
+      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+    });
 
-    const pc = new RTCPeerConnection(servers);
     let localStream;
     let remoteStream = new MediaStream();
 
-    const localVideo = document.getElementById("localVideo");
-    const remoteVideo = document.getElementById("remoteVideo");
+    const localVideo = document.getElementById('localVideo');
+    const remoteVideo = document.getElementById('remoteVideo');
 
-    // 🔄 Setup local camera
     navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
       localStream = stream;
       localVideo.srcObject = stream;
-
-      stream.getTracks().forEach(track => {
-        pc.addTrack(track, stream);
-      });
+      stream.getTracks().forEach(track => pc.addTrack(track, stream));
     });
 
     pc.ontrack = event => {
-      event.streams[0].getTracks().forEach(track => {
-        remoteStream.addTrack(track);
-      });
+      event.streams[0].getTracks().forEach(track => remoteStream.addTrack(track));
       remoteVideo.srcObject = remoteStream;
     };
 
     pc.onicecandidate = event => {
       if (event.candidate) {
         const json = event.candidate.toJSON();
-        if (callDoc && role === "caller") {
-          offerCandidates.add(json);
-        } else if (callDoc && role === "callee") {
-          answerCandidates.add(json);
-        }
+        const path = role === "caller"
+          ? `calls/${callId}/callerCandidates`
+          : `calls/${callId}/calleeCandidates`;
+        db.ref(path).push(json);
       }
     };
 
-    let callDoc, offerCandidates, answerCandidates;
+    let callId = "";
     let role = "";
 
     async function createCall() {
       role = "caller";
-      callDoc = firestore.collection("calls").doc();
-      offerCandidates = callDoc.collection("offerCandidates");
-      answerCandidates = callDoc.collection("answerCandidates");
+      callId = Math.random().toString(36).substring(2, 10);
+      const callRef = db.ref(`calls/${callId}`);
 
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
-      const callData = { offer: { type: offer.type, sdp: offer.sdp } };
-      await callDoc.set(callData);
+      await callRef.set({ offer });
 
-      callDoc.onSnapshot(snapshot => {
-        const data = snapshot.data();
-        if (!pc.currentRemoteDescription && data?.answer) {
+      alert(`Call ID: ${callId}`);
+
+      // Listen for answer
+      callRef.on("value", snapshot => {
+        const data = snapshot.val();
+        if (data?.answer && !pc.currentRemoteDescription) {
           pc.setRemoteDescription(new RTCSessionDescription(data.answer));
         }
       });
 
-      answerCandidates.onSnapshot(snapshot => {
-        snapshot.docChanges().forEach(change => {
-          if (change.type === "added") {
-            const candidate = new RTCIceCandidate(change.doc.data());
-            pc.addIceCandidate(candidate);
-          }
-        });
+      // Listen for ICE from callee
+      db.ref(`calls/${callId}/calleeCandidates`).on("child_added", snap => {
+        const candidate = new RTCIceCandidate(snap.val());
+        pc.addIceCandidate(candidate);
       });
-
-      alert(`Share this Call ID: ${callDoc.id}`);
     }
 
     async function joinCall() {
       role = "callee";
-      const callId = prompt("Enter Call ID:");
-      callDoc = firestore.collection("calls").doc(callId);
-      offerCandidates = callDoc.collection("offerCandidates");
-      answerCandidates = callDoc.collection("answerCandidates");
+      callId = prompt("Enter Call ID:");
+      const callRef = db.ref(`calls/${callId}`);
 
-      const callData = (await callDoc.get()).data();
+      const snapshot = await callRef.get();
+      const data = snapshot.val();
 
-      await pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
+      if (!data?.offer) {
+        alert("Invalid Call ID or no offer found.");
+        return;
+      }
+
+      await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
 
-      await callDoc.update({ answer: { type: answer.type, sdp: answer.sdp } });
+      await callRef.update({ answer });
 
-      offerCandidates.onSnapshot(snapshot => {
-        snapshot.docChanges().forEach(change => {
-          if (change.type === "added") {
-            const data = change.doc.data();
-            pc.addIceCandidate(new RTCIceCandidate(data));
-          }
-        });
+      // Listen for ICE from caller
+      db.ref(`calls/${callId}/callerCandidates`).on("child_added", snap => {
+        const candidate = new RTCIceCandidate(snap.val());
+        pc.addIceCandidate(candidate);
       });
 
-      answerCandidates.onSnapshot(() => {});
+      // Listen for callee ICE
+      db.ref(`calls/${callId}/calleeCandidates`).on("child_added", () => {});
     }
   </script>
 </body>
