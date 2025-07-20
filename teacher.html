@@ -1,135 +1,73 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Teacher Video Call</title>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f1f5f9;
-      margin: 0;
-      padding: 20px;
-    }
-    header {
-      background: #1e293b;
-      color: white;
-      padding: 16px 24px;
-      font-size: 20px;
-      margin-bottom: 30px;
-    }
-    .card {
-      background: white;
-      border-radius: 12px;
-      padding: 24px;
-      max-width: 600px;
-      margin: auto;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-    label {
-      font-weight: bold;
-      display: block;
-      margin: 10px 0 5px;
-    }
-    input[type="text"] {
-      width: 100%;
-      padding: 10px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-    }
-    button {
-      background: #3b82f6;
-      color: white;
-      padding: 10px 16px;
-      margin-top: 16px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-    button:hover {
-      background: #2563eb;
-    }
-    #callMessage {
-      margin-top: 15px;
-      font-weight: 600;
-    }
-  </style>
 </head>
 <body>
-  <header>
-    👩‍🏫 Teacher Video Call Panel
-    <p id="teacherEmail" style="font-size: 14px; margin-top: 6px; color: #93c5fd;"></p>
-  </header>
+  <h2>Teacher - Create Call</h2>
+  <video id="localVideo" autoplay playsinline muted></video>
+  <video id="remoteVideo" autoplay playsinline></video>
+  <p>Call ID: <span id="callIdText">Generating...</span></p>
 
-  <div class="card">
-    <h3>Create a Live Video Call</h3>
-    <label for="className">Class Name</label>
-    <input type="text" id="className" placeholder="Enter Class Name" />
-    
-    <button onclick="createCall()">Start Video Call</button>
-    <p id="callMessage"></p>
-  </div>
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
   <script>
     const firebaseConfig = {
-      apiKey: "AIzaSyAHSxenlPZD8veD-iZ6pJIOVRbuTD2dw0Q",
-      authDomain: "learn-3f43b.firebaseapp.com",
-      databaseURL: "https://learn-3f43b-default-rtdb.firebaseio.com",
-      projectId: "learn-3f43b",
-      storageBucket: "learn-3f43b.firebasestorage.app",
-      messagingSenderId: "54412751232",
-      appId: "1:54412751232:web:31fe8e2f8b5cc03d409165",
-      measurementId: "G-7HRKXL1EPS"
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID",
     };
     firebase.initializeApp(firebaseConfig);
-
-    const auth = firebase.auth();
     const db = firebase.database();
 
-    let teacherName = '';
-    let teacherEmail = '';
+    const localVideo = document.getElementById("localVideo");
+    const remoteVideo = document.getElementById("remoteVideo");
 
-    auth.onAuthStateChanged(user => {
-      if (user) {
-        teacherEmail = user.email;
-        teacherName = user.displayName || user.email.split('@')[0];
-        document.getElementById('teacherEmail').innerText = `Logged in as: ${teacherEmail}`;
-      } else {
-        alert("Please sign in to access this page.");
-      }
-    });
+    let pc = new RTCPeerConnection();
+    let localStream = null;
 
-    function createCall() {
-      const className = document.getElementById('className').value.trim();
-      const msgElem = document.getElementById('callMessage');
-      msgElem.style.color = 'red';
+    async function start() {
+      localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+      localVideo.srcObject = localStream;
 
-      if (!className) {
-        msgElem.innerText = "Class name is required.";
-        return;
-      }
+      // Create offer
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
 
-      const newCallRef = db.ref('calls').push();
-      const callId = newCallRef.key;
+      const callRef = db.ref("calls").push();
+      const callId = callRef.key;
+      document.getElementById("callIdText").innerText = callId;
 
-      newCallRef.set({
-        className,
-        teacher: teacherName,
-        status: 'active',
-        callId
-      })
-      .then(() => {
-        msgElem.style.color = 'green';
-        msgElem.innerText = `Live video call created for class \"${className}\".`;
-        window.location.href = `/video.html?callId=${callId}`;
-      })
-      .catch(err => {
-        msgElem.innerText = "Failed to create call: " + err.message;
+      callRef.set({ offer: offer.toJSON() });
+
+      pc.onicecandidate = e => {
+        if (e.candidate) {
+          callRef.child("offerCandidates").push(e.candidate.toJSON());
+        }
+      };
+
+      callRef.child("answer").on("value", async snapshot => {
+        const answer = snapshot.val();
+        if (answer && !pc.currentRemoteDescription) {
+          await pc.setRemoteDescription(new RTCSessionDescription(answer));
+        }
       });
+
+      callRef.child("answerCandidates").on("child_added", snapshot => {
+        const candidate = new RTCIceCandidate(snapshot.val());
+        pc.addIceCandidate(candidate);
+      });
+
+      pc.ontrack = e => {
+        remoteVideo.srcObject = e.streams[0];
+      };
     }
+
+    start();
   </script>
 </body>
 </html>
