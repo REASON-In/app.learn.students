@@ -1,322 +1,599 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Timetable App with Firebase Auth</title>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; max-width: 900px; }
-    input[type="text"], input[type="time"], input[type="email"], input[type="password"] { padding: 5px; margin: 5px 0; }
-    button { padding: 8px 12px; margin: 5px; cursor: pointer; }
-    .day-container { border: 1px solid #ccc; margin-bottom: 15px; padding: 10px; }
-    .period-row { margin-bottom: 8px; }
-    label { margin-right: 10px; }
-    #countdown { margin-top: 20px; font-size: 1.2em; font-weight: bold; }
-    #login-section, #app-section { max-width: 600px; margin: auto; }
-    #app-section { display: none; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Timetable App with Firebase Auth & Username Setup</title>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<style>
+  /* Reset & base */
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    background: #f5f7fa;
+    color: #333;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+  }
+  h1, h2, h3 {
+    margin: 0 0 15px;
+  }
+
+  /* Containers */
+  .container {
+    width: 100%;
+    max-width: 700px;
+    background: white;
+    padding: 25px 30px;
+    border-radius: 8px;
+    box-shadow: 0 3px 15px rgb(0 0 0 / 0.1);
+    margin-bottom: 30px;
+  }
+
+  /* Auth section */
+  #auth-section, #username-section, #timetable-section {
+    display: none;
+  }
+
+  #auth-section.active, #username-section.active, #timetable-section.active {
+    display: block;
+  }
+
+  label {
+    display: block;
+    margin: 10px 0 5px;
+    font-weight: 600;
+  }
+  input[type="email"], input[type="password"], input[type="text"], input[type="time"] {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1.5px solid #ccc;
+    border-radius: 5px;
+    font-size: 1rem;
+    transition: border-color 0.25s;
+  }
+  input[type="email"]:focus, input[type="password"]:focus, input[type="text"]:focus, input[type="time"]:focus {
+    outline: none;
+    border-color: #4a90e2;
+  }
+
+  button {
+    background-color: #4a90e2;
+    color: white;
+    border: none;
+    padding: 12px 18px;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    margin-top: 15px;
+  }
+  button:hover {
+    background-color: #357ABD;
+  }
+  button:disabled {
+    background-color: #999;
+    cursor: not-allowed;
+  }
+
+  /* Timetable grid */
+  .day-container {
+    border: 1px solid #ddd;
+    padding: 15px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+  }
+  .day-container h3 {
+    margin-bottom: 12px;
+    color: #4a90e2;
+  }
+  .period-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .period-row label {
+    flex: 0 0 120px;
+    font-weight: 600;
+  }
+  .period-row input[type="text"] {
+    flex: 1 1 250px;
+    margin-right: 15px;
+  }
+  .period-row input[type="time"] {
+    width: 120px;
+  }
+
+  /* Header & logout */
+  #user-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+  }
+  #user-email {
+    font-weight: 700;
+    font-size: 1.1rem;
+  }
+
+  /* Validation & messages */
+  .msg-error {
+    color: #d64541;
+    margin-top: 8px;
+    font-weight: 600;
+  }
+  .msg-success {
+    color: #3c763d;
+    margin-top: 8px;
+    font-weight: 600;
+  }
+
+  /* Countdown timer */
+  #countdown {
+    margin-top: 25px;
+    font-size: 1.3rem;
+    font-weight: 700;
+    text-align: center;
+    color: #222;
+  }
+
+  /* Confirmation modal */
+  #confirm-modal {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.45);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+  #confirm-modal.active {
+    display: flex;
+  }
+  #confirm-modal .modal-content {
+    background: white;
+    padding: 30px 35px;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgb(0 0 0 / 0.15);
+    text-align: center;
+    max-width: 350px;
+    font-size: 1.15rem;
+  }
+  #confirm-modal button {
+    margin-top: 20px;
+    width: 100%;
+  }
+
+</style>
 </head>
 <body>
 
-  <div id="login-section">
-    <h2>Login or Signup</h2>
-    <input id="email" type="email" placeholder="Email" required /><br/>
-    <input id="password" type="password" placeholder="Password" required /><br/>
-    <button id="login-btn">Login</button>
-    <button id="signup-btn">Sign Up</button>
-    <div id="login-msg" style="color:red; margin-top:10px;"></div>
-  </div>
+  <h1>Timetable App</h1>
 
-  <div id="app-section">
-    <h2>Welcome, <span id="user-email"></span></h2>
-    <button id="logout-btn">Logout</button>
+  <!-- Authentication Section -->
+  <section id="auth-section" class="container active">
+    <h2>Authenticate</h2>
+    <label for="email-input">Email:</label>
+    <input id="email-input" type="email" placeholder="your.email@example.com" autocomplete="username" />
+    
+    <label for="password-input">Password:</label>
+    <input id="password-input" type="password" placeholder="Your password" autocomplete="current-password" />
 
-    <h3>Timetable (Monday to Friday)</h3>
+    <button id="auth-btn">Login / Sign Up</button>
+    <div id="auth-msg" class="msg-error"></div>
+  </section>
+
+  <!-- Username Setup Section -->
+  <section id="username-section" class="container">
+    <h2>Set Your Username</h2>
+    <label for="username-input">Username:</label>
+    <input id="username-input" type="text" placeholder="Enter your username" />
+    <button id="username-submit-btn">Save Username</button>
+    <div id="username-msg" class="msg-error"></div>
+  </section>
+
+  <!-- Timetable Section -->
+  <section id="timetable-section" class="container">
+    <div id="user-info">
+      <div>Logged in as <span id="user-email"></span></div>
+      <button id="logout-btn">Logout</button>
+    </div>
+
+    <h2>Edit Timetable</h2>
     <button id="auto-fill-btn">Auto-Fill Default Timetable</button>
     <button id="save-btn">Save Timetable</button>
-    <div id="validation-msg" style="color:red; margin:10px 0;"></div>
+    <div id="validation-msg" class="msg-error"></div>
 
-    <div id="timetable-container"></div>
+    <div id="timetable-container" style="margin-top:20px;"></div>
 
-    <div id="countdown">Loading countdown...</div>
+    <div id="countdown"></div>
+  </section>
+
+  <!-- Confirmation Modal -->
+  <div id="confirm-modal">
+    <div class="modal-content">
+      <div>✅ Timetable saved successfully!</div>
+      <button id="confirm-close-btn">Close</button>
+    </div>
   </div>
 
-  <script>
-    // Firebase config
-    const firebaseConfig = {
-      apiKey: "AIzaSyAHSxenlPZD8veD-iZ6pJIOVRbuTD2dw0Q",
-      authDomain: "learn-3f43b.firebaseapp.com",
-      databaseURL: "https://learn-3f43b-default-rtdb.firebaseio.com",
-      projectId: "learn-3f43b",
-      storageBucket: "learn-3f43b.firebasestorage.app",
-      messagingSenderId: "54412751232",
-      appId: "1:54412751232:web:31fe8e2f8b5cc03d409165",
-      measurementId: "G-7HRKXL1EPS"
-    };
+<script>
+  // Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyAHSxenlPZD8veD-iZ6pJIOVRbuTD2dw0Q",
+    authDomain: "learn-3f43b.firebaseapp.com",
+    databaseURL: "https://learn-3f43b-default-rtdb.firebaseio.com",
+    projectId: "learn-3f43b",
+    storageBucket: "learn-3f43b.firebasestorage.app",
+    messagingSenderId: "54412751232",
+    appId: "1:54412751232:web:31fe8e2f8b5cc03d409165",
+    measurementId: "G-7HRKXL1EPS"
+  };
 
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const database = firebase.database();
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const database = firebase.database();
 
-    // Elements
-    const loginSection = document.getElementById('login-section');
-    const appSection = document.getElementById('app-section');
-    const emailInput = document.getElementById('email');
-    const passwordInput = document.getElementById('password');
-    const loginBtn = document.getElementById('login-btn');
-    const signupBtn = document.getElementById('signup-btn');
-    const logoutBtn = document.getElementById('logout-btn');
-    const userEmailSpan = document.getElementById('user-email');
-    const autoFillBtn = document.getElementById('auto-fill-btn');
-    const saveBtn = document.getElementById('save-btn');
-    const timetableContainer = document.getElementById('timetable-container');
-    const countdownDiv = document.getElementById('countdown');
-    const loginMsg = document.getElementById('login-msg');
-    const validationMsg = document.getElementById('validation-msg');
+  // Elements
+  const authSection = document.getElementById('auth-section');
+  const usernameSection = document.getElementById('username-section');
+  const timetableSection = document.getElementById('timetable-section');
 
-    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-    const periodCount = 4;
+  const emailInput = document.getElementById('email-input');
+  const passwordInput = document.getElementById('password-input');
+  const authBtn = document.getElementById('auth-btn');
+  const authMsg = document.getElementById('auth-msg');
 
-    let timetable = {}; // Will hold the timetable state
-    let currentUser = null;
-    let countdownInterval = null;
+  const usernameInput = document.getElementById('username-input');
+  const usernameSubmitBtn = document.getElementById('username-submit-btn');
+  const usernameMsg = document.getElementById('username-msg');
 
-    // Default timetable for autofill
-    const defaultPeriods = [
-      { subject: 'Math', startTime: '09:00' },
-      { subject: 'English', startTime: '10:00' },
-      { subject: 'Science', startTime: '11:00' },
-      { subject: 'History', startTime: '12:00' },
-    ];
+  const userEmailSpan = document.getElementById('user-email');
+  const logoutBtn = document.getElementById('logout-btn');
 
-    // Auth state listener
-    auth.onAuthStateChanged(user => {
-      if (user) {
-        currentUser = user;
-        userEmailSpan.textContent = user.email;
-        loginSection.style.display = 'none';
-        appSection.style.display = 'block';
-        loadTimetable();
-      } else {
-        currentUser = null;
-        userEmailSpan.textContent = '';
-        loginSection.style.display = 'block';
-        appSection.style.display = 'none';
-        clearInterval(countdownInterval);
-        countdownDiv.textContent = '';
-        timetableContainer.innerHTML = '';
-        timetable = {};
-      }
-    });
+  const autoFillBtn = document.getElementById('auto-fill-btn');
+  const saveBtn = document.getElementById('save-btn');
+  const validationMsg = document.getElementById('validation-msg');
+  const timetableContainer = document.getElementById('timetable-container');
 
-    // Signup handler
-    signupBtn.onclick = () => {
-      loginMsg.textContent = '';
-      const email = emailInput.value.trim();
-      const password = passwordInput.value;
-      if (!email || !password) {
-        loginMsg.textContent = 'Email and password required!';
-        return;
-      }
-      auth.createUserWithEmailAndPassword(email, password)
-        .catch(e => loginMsg.textContent = 'Signup error: ' + e.message);
-    };
+  const countdownDiv = document.getElementById('countdown');
 
-    // Login handler
-    loginBtn.onclick = () => {
-      loginMsg.textContent = '';
-      const email = emailInput.value.trim();
-      const password = passwordInput.value;
-      if (!email || !password) {
-        loginMsg.textContent = 'Email and password required!';
-        return;
-      }
-      auth.signInWithEmailAndPassword(email, password)
-        .catch(e => loginMsg.textContent = 'Login error: ' + e.message);
-    };
+  const confirmModal = document.getElementById('confirm-modal');
+  const confirmCloseBtn = document.getElementById('confirm-close-btn');
 
-    // Logout handler
-    logoutBtn.onclick = () => {
-      auth.signOut();
-    };
+  // Constants
+  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+  const periodCount = 4;
 
-    // Load timetable from Firebase DB
-    function loadTimetable() {
-      validationMsg.textContent = '';
-      timetableContainer.innerHTML = 'Loading timetable...';
-      database.ref(`users/${currentUser.uid}/timetable`).get()
-        .then(snapshot => {
-          if (snapshot.exists()) {
-            timetable = snapshot.val();
-          } else {
-            timetable = {};
-            days.forEach(day => {
-              timetable[day] = JSON.parse(JSON.stringify(defaultPeriods));
-            });
-          }
-          renderTimetable();
-          startCountdown();
-        })
-        .catch(err => {
-          timetableContainer.innerHTML = 'Error loading timetable: ' + err.message;
-        });
+  const defaultPeriods = [
+    { subject: 'Math', startTime: '08:00' },
+    { subject: 'English', startTime: '09:00' },
+    { subject: 'Science', startTime: '10:00' },
+    { subject: 'History', startTime: '11:00' },
+  ];
+
+  let currentUser = null;
+  let userId = null;
+  let countdownInterval = null;
+  let timetableData = {};
+
+  // Show/hide sections helper
+  function showSection(section) {
+    authSection.classList.remove('active');
+    usernameSection.classList.remove('active');
+    timetableSection.classList.remove('active');
+    section.classList.add('active');
+  }
+
+  // Validate email format simple
+  function isValidEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
+
+  // Auth button click
+  authBtn.addEventListener('click', async () => {
+    authMsg.textContent = '';
+    const email = emailInput.value.trim();
+    const password = passwordInput.value.trim();
+    if (!isValidEmail(email)) {
+      authMsg.textContent = 'Please enter a valid email.';
+      return;
     }
-
-    // Render timetable inputs
-    function renderTimetable() {
-      timetableContainer.innerHTML = '';
-      days.forEach(day => {
-        const dayDiv = document.createElement('div');
-        dayDiv.className = 'day-container';
-
-        const dayTitle = document.createElement('h3');
-        dayTitle.textContent = day;
-        dayDiv.appendChild(dayTitle);
-
-        timetable[day].forEach((period, i) => {
-          const row = document.createElement('div');
-          row.className = 'period-row';
-
-          const subjLabel = document.createElement('label');
-          subjLabel.textContent = `Period ${i+1} Subject: `;
-          const subjInput = document.createElement('input');
-          subjInput.type = 'text';
-          subjInput.value = period.subject;
-          subjInput.oninput = (e) => {
-            timetable[day][i].subject = e.target.value;
-          };
-
-          const timeLabel = document.createElement('label');
-          timeLabel.textContent = 'Start Time: ';
-          const timeInput = document.createElement('input');
-          timeInput.type = 'time';
-          timeInput.value = period.startTime;
-          timeInput.step = 60; // minute precision
-          timeInput.oninput = (e) => {
-            const val = e.target.value;
-            if (!/^\d{2}:\d{2}$/.test(val)) return;
-            const [h, m] = val.split(':').map(Number);
-            if (h < 0 || h > 23 || m < 0 || m > 59) return;
-            timetable[day][i].startTime = val;
-          };
-
-          row.appendChild(subjLabel);
-          row.appendChild(subjInput);
-          row.appendChild(timeLabel);
-          row.appendChild(timeInput);
-          dayDiv.appendChild(row);
-        });
-
-        timetableContainer.appendChild(dayDiv);
-      });
+    if (password.length < 6) {
+      authMsg.textContent = 'Password should be at least 6 characters.';
+      return;
     }
-
-    // Validate timetable (period times ascending per day)
-    function validateTimetable() {
-      for (let day of days) {
-        const periods = timetable[day];
-        if (!periods || periods.length !== periodCount) return false;
-        let lastMinutes = -1;
-        for (let p of periods) {
-          const [h, m] = p.startTime.split(':').map(Number);
-          const totalMinutes = h * 60 + m;
-          if (totalMinutes <= lastMinutes) {
-            return false; // Not strictly ascending
-          }
-          lastMinutes = totalMinutes;
-          if (!p.subject.trim()) {
-            return false; // Subject can't be empty
-          }
-        }
+    try {
+      // Try sign in
+      const userCredential = await auth.signInWithEmailAndPassword(email, password);
+      onUserLoggedIn(userCredential.user);
+    } catch (signInErr) {
+      // If sign in fails, try sign up
+      try {
+        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+        onUserLoggedIn(userCredential.user);
+      } catch (signUpErr) {
+        authMsg.textContent = signUpErr.message || 'Authentication failed.';
       }
-      return true;
     }
+  });
 
-    // Save timetable to DB
-    saveBtn.onclick = () => {
-      validationMsg.textContent = '';
-      if (!validateTimetable()) {
-        validationMsg.textContent = 'Timetable invalid: check period times and subject names!';
-        return;
-      }
-      database.ref(`users/${currentUser.uid}/timetable`).set(timetable)
-        .then(() => alert('Timetable saved!'))
-        .catch(e => alert('Save failed: ' + e.message));
-    };
+  // After login
+  async function onUserLoggedIn(user) {
+    currentUser = user;
+    userId = user.uid;
 
-    // Auto-fill default timetable
-    autoFillBtn.onclick = () => {
-      days.forEach(day => {
-        timetable[day] = JSON.parse(JSON.stringify(defaultPeriods));
-      });
+    userEmailSpan.textContent = user.email;
+
+    // Check if username is set
+    const usernameSnapshot = await database.ref(`users/${userId}/username`).get();
+    if (!usernameSnapshot.exists()) {
+      showSection(usernameSection);
+    } else {
+      timetableData = await loadTimetable();
+      showSection(timetableSection);
       renderTimetable();
-      validationMsg.textContent = '';
-    };
+      startCountdown();
+    }
+  }
 
-    // Find closest upcoming period for countdown
-    function findClosestPeriod() {
+  // Username submission
+  usernameSubmitBtn.addEventListener('click', async () => {
+    usernameMsg.textContent = '';
+    const username = usernameInput.value.trim();
+    if (!username) {
+      usernameMsg.textContent = 'Username cannot be empty.';
+      return;
+    }
+    // Save username
+    try {
+      await database.ref(`users/${userId}/username`).set(username);
+      timetableData = await loadTimetable();
+      showSection(timetableSection);
+      renderTimetable();
+      startCountdown();
+    } catch (err) {
+      usernameMsg.textContent = 'Error saving username.';
+    }
+  });
+
+  // Logout
+  logoutBtn.addEventListener('click', async () => {
+    await auth.signOut();
+    currentUser = null;
+    userId = null;
+    timetableData = {};
+    clearInterval(countdownInterval);
+    countdownDiv.textContent = '';
+    emailInput.value = '';
+    passwordInput.value = '';
+    usernameInput.value = '';
+    authMsg.textContent = '';
+    validationMsg.textContent = '';
+    showSection(authSection);
+  });
+
+  // Render timetable inputs
+  function renderTimetable() {
+    timetableContainer.innerHTML = '';
+
+    for (const day of days) {
+      const dayDiv = document.createElement('div');
+      dayDiv.classList.add('day-container');
+
+      const dayTitle = document.createElement('h3');
+      dayTitle.textContent = day;
+      dayDiv.appendChild(dayTitle);
+
+      const dayPeriods = timetableData[day] || Array(periodCount).fill(null).map(() => ({ subject: '', startTime: '' }));
+
+      for (let i = 0; i < periodCount; i++) {
+        const period = dayPeriods[i] || { subject: '', startTime: '' };
+
+        const periodRow = document.createElement('div');
+        periodRow.classList.add('period-row');
+
+        const label = document.createElement('label');
+        label.textContent = `Period ${i + 1}:`;
+        label.htmlFor = `${day}-subject-${i}`;
+        periodRow.appendChild(label);
+
+        const subjectInput = document.createElement('input');
+        subjectInput.type = 'text';
+        subjectInput.placeholder = 'Subject name';
+        subjectInput.id = `${day}-subject-${i}`;
+        subjectInput.value = period.subject || '';
+        subjectInput.dataset.day = day;
+        subjectInput.dataset.period = i;
+        subjectInput.classList.add('subject-input');
+        periodRow.appendChild(subjectInput);
+
+        const timeInput = document.createElement('input');
+        timeInput.type = 'time';
+        timeInput.value = period.startTime || '';
+        timeInput.id = `${day}-time-${i}`;
+        timeInput.dataset.day = day;
+        timeInput.dataset.period = i;
+        timeInput.classList.add('time-input');
+        periodRow.appendChild(timeInput);
+
+        dayDiv.appendChild(periodRow);
+      }
+
+      timetableContainer.appendChild(dayDiv);
+    }
+  }
+
+  // Auto fill button
+  autoFillBtn.addEventListener('click', () => {
+    for (const day of days) {
+      timetableData[day] = defaultPeriods.map(p => ({ subject: p.subject, startTime: p.startTime }));
+    }
+    renderTimetable();
+  });
+
+  // Validate timetable logic
+  function validateTimetable() {
+    validationMsg.textContent = '';
+
+    for (const day of days) {
+      const periods = timetableData[day];
+      if (!periods) return false;
+      let lastTimeMinutes = -1;
+
+      for (let i = 0; i < periodCount; i++) {
+        const p = periods[i];
+        if (!p.subject || p.subject.trim() === '') {
+          validationMsg.textContent = `Subject name cannot be empty on ${day}, Period ${i + 1}`;
+          return false;
+        }
+        if (!p.startTime || !/^\d{2}:\d{2}$/.test(p.startTime)) {
+          validationMsg.textContent = `Invalid start time on ${day}, Period ${i + 1}`;
+          return false;
+        }
+        const [h, m] = p.startTime.split(':').map(Number);
+        const timeMinutes = h * 60 + m;
+        if (timeMinutes <= lastTimeMinutes) {
+          validationMsg.textContent = `Start times must be ascending on ${day} (Period ${i + 1})`;
+          return false;
+        }
+        lastTimeMinutes = timeMinutes;
+      }
+    }
+
+    return true;
+  }
+
+  // Save button click
+  saveBtn.addEventListener('click', async () => {
+    // Collect current timetable from inputs
+    for (const day of days) {
+      timetableData[day] = [];
+      for (let i = 0; i < periodCount; i++) {
+        const subjInput = document.querySelector(`input#${day}-subject-${i}`);
+        const timeInput = document.querySelector(`input#${day}-time-${i}`);
+        timetableData[day].push({
+          subject: subjInput.value.trim(),
+          startTime: timeInput.value.trim()
+        });
+      }
+    }
+
+    if (!validateTimetable()) return;
+
+    try {
+      await database.ref(`users/${userId}/timetable`).set(timetableData);
+      showConfirmModal();
+      startCountdown();
+    } catch (err) {
+      validationMsg.textContent = 'Failed to save timetable.';
+    }
+  });
+
+  // Load timetable from DB
+  async function loadTimetable() {
+    try {
+      const snap = await database.ref(`users/${userId}/timetable`).get();
+      if (snap.exists()) {
+        return snap.val();
+      }
+      // If no timetable, set empty for all days
+      const emptyTimetable = {};
+      for (const day of days) {
+        emptyTimetable[day] = Array(periodCount).fill(null).map(() => ({ subject: '', startTime: '' }));
+      }
+      return emptyTimetable;
+    } catch {
+      return {};
+    }
+  }
+
+  // Countdown timer
+  function startCountdown() {
+    if (countdownInterval) clearInterval(countdownInterval);
+
+    countdownInterval = setInterval(() => {
+      if (!currentUser) {
+        countdownDiv.textContent = '';
+        clearInterval(countdownInterval);
+        return;
+      }
+
       const now = new Date();
-      const dayIndex = now.getDay() - 1; // Mon=1, Sun=0
-      if (dayIndex < 0 || dayIndex >= days.length) {
-        return null; // Weekend no periods
+      const dayName = days[now.getDay() - 1]; // getDay(): 1=Mon ... 5=Fri, 0=Sun, 6=Sat
+      if (!dayName) {
+        countdownDiv.textContent = 'No school today!';
+        return;
       }
-      const dayName = days[dayIndex];
-      const periods = timetable[dayName];
-      if (!periods) return null;
 
-      const nowMinutes = now.getHours() * 60 + now.getMinutes();
+      const periods = timetableData[dayName];
+      if (!periods || periods.length === 0) {
+        countdownDiv.textContent = 'No timetable for today.';
+        return;
+      }
 
-      let closest = null;
+      // Find next closest period
       let minDiff = Infinity;
-
+      let nextPeriod = null;
       for (let i = 0; i < periods.length; i++) {
-        const [h, m] = periods[i].startTime.split(':').map(Number);
-        const periodMinutes = h * 60 + m;
-        const diff = periodMinutes - nowMinutes;
-        if (diff >= 0 && diff < minDiff) {
-          minDiff = diff;
-          closest = { day: dayName, periodIndex: i, subject: periods[i].subject, startTime: periods[i].startTime };
+        const p = periods[i];
+        if (!p || !p.startTime) continue;
+        const [h, m] = p.startTime.split(':').map(Number);
+        const periodTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0);
+        const diffMs = periodTime - now;
+        if (diffMs >= 0 && diffMs < minDiff) {
+          minDiff = diffMs;
+          nextPeriod = { ...p, index: i };
         }
       }
-      return closest;
+
+      if (!nextPeriod) {
+        countdownDiv.textContent = 'No more periods today.';
+        return;
+      }
+
+      // Format ms to hh:mm:ss
+      let totalSeconds = Math.floor(minDiff / 1000);
+      const h = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+      totalSeconds %= 3600;
+      const m = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+      const s = String(totalSeconds % 60).padStart(2, '0');
+
+      countdownDiv.textContent = `Next Period: ${nextPeriod.subject} (Period ${nextPeriod.index + 1}) starts in ${h}:${m}:${s}`;
+    }, 1000);
+  }
+
+  // Confirmation modal
+  function showConfirmModal() {
+    confirmModal.classList.add('active');
+  }
+  confirmCloseBtn.addEventListener('click', () => {
+    confirmModal.classList.remove('active');
+  });
+
+  // On load, check if user already logged in (persisted by Firebase)
+  auth.onAuthStateChanged(async (user) => {
+    if (user) {
+      onUserLoggedIn(user);
+    } else {
+      showSection(authSection);
     }
+  });
 
-    // Format time difference as hh:mm:ss
-    function formatDiff(ms) {
-      const totalSec = Math.floor(ms / 1000);
-      const h = String(Math.floor(totalSec / 3600)).padStart(2, '0');
-      const m = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0');
-      const s = String(totalSec % 60).padStart(2, '0');
-      return `${h}:${m}:${s}`;
-    }
+</script>
 
-    // Countdown timer
-    function startCountdown() {
-      if (countdownInterval) clearInterval(countdownInterval);
-
-      countdownInterval = setInterval(() => {
-        if (!currentUser) {
-          countdownDiv.textContent = '';
-          clearInterval(countdownInterval);
-          return;
-        }
-        const closest = findClosestPeriod();
-        if (!closest) {
-          countdownDiv.textContent = 'No upcoming periods today.';
-          return;
-        }
-        const now = new Date();
-        const [h, m] = closest.startTime.split(':').map(Number);
-        const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0);
-
-        let diffMs = target - now;
-        if (diffMs < 0) diffMs = 0;
-
-        countdownDiv.textContent = `Next: ${closest.subject} (${closest.day} Period ${closest.periodIndex + 1}) starts in ${formatDiff(diffMs)}`;
-      }, 1000);
-    }
-  </script>
 </body>
 </html>
