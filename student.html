@@ -1,194 +1,226 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Student Dashboard</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
   <style>
-    body {
+    * {
       margin: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #f3f4f6;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      background-color: #f0f4f8;
     }
 
     header {
       background-color: #0a3d62;
-      color: white;
-      padding: 1rem 2rem;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      position: sticky;
-      top: 0;
-      z-index: 999;
+      color: #fff;
+      padding: 15px 0;
+      text-align: center;
     }
 
-    header h1 {
-      margin: 0;
-      font-size: 1.5rem;
+    nav {
+      display: flex;
+      justify-content: center;
+      background-color: #1e5aa5;
+      padding: 10px;
+      gap: 10px;
     }
 
     nav button {
-      background-color: #2980b9;
-      border: none;
+      background-color: #3478f6;
       color: white;
-      padding: 0.5rem 1rem;
-      margin: 0 0.2rem;
+      padding: 10px 20px;
+      border: none;
       border-radius: 8px;
       cursor: pointer;
-      font-weight: bold;
     }
 
     nav button:hover {
-      background-color: #3498db;
+      background-color: #1559c7;
     }
 
     .section {
       display: none;
-      padding: 2rem;
+      padding: 40px;
+      height: calc(100vh - 110px);
+      overflow-y: auto;
     }
 
-    .active {
+    .section.active {
       display: block;
     }
 
-    .profile-pic {
-      width: 150px;
-      height: 150px;
+    #profile-pic {
+      width: 300px;
+      height: 300px;
       border-radius: 50%;
       object-fit: cover;
-      border: 4px solid #0a3d62;
+      display: block;
+      margin: 0 auto 10px;
     }
 
     .card {
-      background-color: #eaf4ff;
-      padding: 1rem;
-      border-radius: 12px;
-      margin-top: 1rem;
-    }
-
-    .subject-strength {
-      margin: 1rem 0;
-    }
-
-    .bar {
-      height: 20px;
-      background-color: #3498db;
+      background-color: #e0f0ff;
+      padding: 15px;
       border-radius: 10px;
-      margin-top: 0.3rem;
+      margin-bottom: 10px;
     }
 
-    .chat-box, .ai-box {
-      width: 100%;
-      height: 300px;
-      background-color: white;
-      border-radius: 8px;
-      padding: 1rem;
-      overflow-y: auto;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    .strength-bar {
+      height: 20px;
+      background-color: #d1e0ff;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 10px;
     }
 
-    .join-call {
-      margin-top: 1rem;
-    }
-
-    .no-calls {
-      color: #888;
-      margin-top: 1rem;
-      font-style: italic;
+    .strength-bar span {
+      display: block;
+      height: 100%;
+      background-color: #4caf50;
     }
   </style>
 </head>
+
 <body>
   <header>
     <h1>🎓 Student Dashboard</h1>
-    <nav>
-      <button onclick="switchSection('profile')">👤 Profile</button>
-      <button onclick="switchSection('video')">🎥 Video Calls</button>
-      <button onclick="switchSection('chat')">💬 Chat</button>
-      <button onclick="switchSection('ai')">🤖 AI Assistant</button>
-      <button onclick="switchSection('subjects')">📊 Subjects</button>
-    </nav>
   </header>
+  <nav>
+    <button onclick="showSection('profile')">👤 Profile</button>
+    <button onclick="showSection('video')">📚 Video Calls</button>
+    <button onclick="showSection('chat')">💬 Chat</button>
+    <button onclick="showSection('ai')">🤖 AI Assistant</button>
+    <button onclick="showSection('subjects')">📊 Subjects</button>
+  </nav>
 
   <section id="profile" class="section active">
-    <h2>👤 Your Profile</h2>
-    <img id="profileImage" class="profile-pic" src="https://via.placeholder.com/150" alt="Profile Picture">
-    <input type="file" onchange="uploadImage(event)">
-    <p>Email: student@school.edu</p>
+    <img id="profile-pic" src="" alt="Profile Picture" />
+    <input type="file" onchange="uploadProfilePic(event)" />
+    <p>Email: <span id="user-email">Loading...</span></p>
   </section>
 
   <section id="video" class="section">
     <h2>🎥 Join a Class Video Call</h2>
-    <div id="videoCallsContainer">
-      <p class="no-calls">No calls yet. Waiting for teachers to start one...</p>
-    </div>
+    <div id="call-list"></div>
   </section>
 
   <section id="chat" class="section">
-    <h2>💬 Chat with Online Users</h2>
-    <div class="chat-box">
-      <!-- Chat messages will appear here -->
-    </div>
-    <input type="text" placeholder="Type a message...">
+    <h2>💬 Online Users</h2>
+    <ul id="online-users"></ul>
   </section>
 
   <section id="ai" class="section">
-    <h2>🤖 AI Assistant</h2>
-    <div class="ai-box">
-      <!-- AI chat responses -->
-    </div>
-    <input type="text" placeholder="Ask AI anything...">
+    <h2>🤖 Ask AI</h2>
+    <input type="text" placeholder="Ask a question..." />
+    <button>Send</button>
+    <p><i>AI responses will go here...</i></p>
   </section>
 
   <section id="subjects" class="section">
-    <h2>📊 Your Subject Strengths</h2>
-    <div class="subject-strength">
-      <strong>Math:</strong>
-      <div class="bar" style="width: 80%"></div>
-    </div>
-    <div class="subject-strength">
-      <strong>Science:</strong>
-      <div class="bar" style="width: 70%"></div>
-    </div>
-    <div class="subject-strength">
-      <strong>English:</strong>
-      <div class="bar" style="width: 90%"></div>
-    </div>
+    <h2>📊 Subject Strengths</h2>
+    <div id="subject-strengths"></div>
   </section>
 
   <script>
-    function switchSection(section) {
-      document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
-      document.getElementById(section).classList.add('active');
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "SENDER_ID",
+      appId: "APP_ID"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const auth = firebase.auth();
+
+    function showSection(id) {
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
     }
 
-    function uploadImage(event) {
+    function uploadProfilePic(e) {
       const reader = new FileReader();
-      reader.onload = function(){
-        document.getElementById('profileImage').src = reader.result;
+      reader.onload = () => {
+        document.getElementById('profile-pic').src = reader.result;
+        localStorage.setItem('profilePic', reader.result);
       }
-      reader.readAsDataURL(event.target.files[0]);
+      reader.readAsDataURL(e.target.files[0]);
     }
 
-    // Example dynamic call loader (to be replaced with Firebase logic)
-    function loadCalls(calls) {
-      const container = document.getElementById('videoCallsContainer');
+    function loadProfilePic() {
+      const pic = localStorage.getItem('profilePic');
+      if (pic) document.getElementById('profile-pic').src = pic;
+    }
+
+    // Load calls from Firebase
+    function loadVideoCalls() {
+      const callList = document.getElementById('call-list');
+      db.ref('videoCalls').on('value', snapshot => {
+        callList.innerHTML = '';
+        const data = snapshot.val();
+        if (data) {
+          Object.values(data).forEach(call => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `<strong>${call.class}</strong><br>Teacher: ${call.teacher}<br><button onclick="window.location='${call.link}'">Join Call</button>`;
+            callList.appendChild(card);
+          });
+        } else {
+          callList.innerHTML = '<p>No active calls right now.</p>';
+        }
+      });
+    }
+
+    // Show random subject strengths (simulate for now)
+    function showSubjectStrengths() {
+      const subjects = ["Math", "English", "Science", "History"];
+      const container = document.getElementById('subject-strengths');
       container.innerHTML = '';
-      if (calls.length === 0) {
-        container.innerHTML = '<p class="no-calls">No calls yet. Waiting for teachers to start one...</p>';
-        return;
-      }
-      calls.forEach(call => {
+      subjects.forEach(subject => {
+        const strength = Math.floor(Math.random() * 100);
         const div = document.createElement('div');
-        div.className = 'card';
-        div.innerHTML = `<strong>${call.subject} Class</strong><br>Teacher: ${call.teacher}<br><button class="join-call">Join Call</button>`;
+        div.innerHTML = `<strong>${subject}</strong><div class='strength-bar'><span style='width:${strength}%'></span></div>`;
         container.appendChild(div);
       });
     }
 
-    // TEMP EXAMPLE
-    loadCalls([]);
+    window.onload = () => {
+      loadProfilePic();
+      showSubjectStrengths();
+      loadVideoCalls();
+      auth.onAuthStateChanged(user => {
+        if (user) {
+          document.getElementById('user-email').textContent = user.email;
+          db.ref('online/' + user.uid).set(true);
+          db.ref('online/' + user.uid).onDisconnect().remove();
+        }
+      });
+
+      db.ref('online').on('value', snap => {
+        const list = document.getElementById('online-users');
+        list.innerHTML = '';
+        if (!snap.exists()) return;
+        Object.keys(snap.val()).forEach(uid => {
+          const li = document.createElement('li');
+          li.textContent = uid;
+          list.appendChild(li);
+        });
+      });
+    }
   </script>
 </body>
+
 </html>
