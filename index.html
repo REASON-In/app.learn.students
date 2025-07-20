@@ -3,214 +3,80 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>School Dashboard</title>
+<title>Timetable Example</title>
 <style>
-  body { font-family: Arial, sans-serif; margin: 0; background: #f4f4f9; }
-  header { background: #0057b7; color: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; }
-  nav button {
-    background: transparent; border: none; color: white; font-size: 16px; margin: 0 5px;
-    padding: 8px 12px; cursor: pointer; border-radius: 4px;
-  }
-  nav button.active, nav button:hover {
-    background: #003d7a;
-  }
-  main { padding: 20px; }
-  .hidden { display: none; }
-
-  /* Login form */
-  #auth-section {
-    max-width: 400px; margin: 30px auto; background: white; padding: 20px; border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-  }
-  #auth-section input {
-    width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ccc; border-radius: 4px;
-  }
-  #auth-section button {
-    background: #0057b7; color: white; border: none; padding: 10px; width: 100%; cursor: pointer; border-radius: 4px;
-  }
-  #auth-section button:hover { background: #00408c; }
-  #auth-section .toggle-link {
-    margin-top: 10px; color: #0057b7; cursor: pointer; text-align: center;
-  }
-  #auth-section .toggle-link:hover {
-    text-decoration: underline;
-  }
-
-  /* Timetable grid */
-  table {
-    width: 100%; border-collapse: collapse; margin-top: 20px;
-  }
-  table, th, td {
-    border: 1px solid #ccc;
-  }
-  th, td {
-    padding: 10px; text-align: center;
-  }
-  input.timetable-input {
-    width: 90%; padding: 5px; border: 1px solid #aaa; border-radius: 3px;
-  }
-
-  /* Search section */
-  #search-section input[type=text] {
-    width: 100%; padding: 10px; font-size: 16px; margin-bottom: 10px; border-radius: 4px; border: 1px solid #ccc;
-  }
-  #search-results {
-    background: white; padding: 10px; border-radius: 6px; max-height: 300px; overflow-y: auto;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  }
-  #search-results div {
-    padding: 6px 4px; border-bottom: 1px solid #eee;
-  }
-  #search-results div:last-child {
-    border-bottom: none;
-  }
-
-  /* Timer section */
-  #timer-section {
-    max-width: 500px; margin: 0 auto; text-align: center;
-  }
-  #timer-display {
-    font-size: 48px; margin: 20px 0; font-weight: bold;
-  }
-  #period-name {
-    font-size: 24px; margin-bottom: 10px;
-  }
-  #study-section {
-    margin-top: 20px; padding: 15px; background: #d1e7dd; border-radius: 6px;
-  }
-
-  /* Chat placeholders */
-  .placeholder {
-    background: white; padding: 20px; border-radius: 8px; text-align: center; color: #777; font-style: italic;
-  }
-
+  body { font-family: Arial, sans-serif; margin: 20px; }
+  .timetable-input { width: 150px; margin: 5px; }
+  #timetable-container { margin-top: 20px; }
 </style>
 </head>
 <body>
 
-<header>
-  <div>School Dashboard</div>
-  <nav>
-    <button class="tab-btn active" data-tab="search">Search</button>
-    <button class="tab-btn" data-tab="timer">Timer</button>
-    <button class="tab-btn" data-tab="ai-chat">AI Chat</button>
-    <button class="tab-btn" data-tab="user-chat">User Chat</button>
-    <button class="tab-btn" data-tab="video-call">Video Call</button>
-    <button class="tab-btn" data-tab="timetable-edit">Edit Timetable</button>
-    <button id="logout-btn" style="display:none;">Logout</button>
-  </nav>
-</header>
+<h2>School Timetable</h2>
 
-<main>
-  <!-- Auth Section -->
-  <section id="auth-section">
-    <h2 id="auth-title">Login</h2>
-    <input type="email" id="email" placeholder="Email" />
-    <input type="password" id="password" placeholder="Password" />
-    <button id="auth-btn">Login</button>
-    <div class="toggle-link" id="toggle-auth">Don't have an account? Sign up</div>
-    <div id="auth-error" style="color:red; margin-top:10px;"></div>
-  </section>
+<div id="auth-section">
+  <input id="email" placeholder="Email" type="email" /><br />
+  <input id="password" placeholder="Password" type="password" /><br />
+  <button id="signup-btn">Sign Up</button>
+  <button id="login-btn">Log In</button>
+  <button id="logout-btn" style="display:none;">Log Out</button>
+</div>
 
-  <!-- Main Dashboard Sections -->
-  <section id="search" class="hidden">
-    <h2>Search School Stuff</h2>
-    <input type="text" id="search-input" placeholder="Search topics..." />
-    <div id="search-results"></div>
-  </section>
+<div id="timetable-container" style="display:none;">
+  <h3>Edit Timetable</h3>
+  <table border="1" cellpadding="5">
+    <thead>
+      <tr><th>Day</th><th>Period 1</th><th>Period 2</th><th>Period 3</th><th>Period 4</th><th>Period 5</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Mon</td>
+        <td><input type="text" class="timetable-input" data-day="Mon" data-period="1" /></td>
+        <td><input type="text" class="timetable-input" data-day="Mon" data-period="2" /></td>
+        <td><input type="text" class="timetable-input" data-day="Mon" data-period="3" /></td>
+        <td><input type="text" class="timetable-input" data-day="Mon" data-period="4" /></td>
+        <td><input type="text" class="timetable-input" data-day="Mon" data-period="5" /></td>
+      </tr>
+      <tr>
+        <td>Tue</td>
+        <td><input type="text" class="timetable-input" data-day="Tue" data-period="1" /></td>
+        <td><input type="text" class="timetable-input" data-day="Tue" data-period="2" /></td>
+        <td><input type="text" class="timetable-input" data-day="Tue" data-period="3" /></td>
+        <td><input type="text" class="timetable-input" data-day="Tue" data-period="4" /></td>
+        <td><input type="text" class="timetable-input" data-day="Tue" data-period="5" /></td>
+      </tr>
+      <tr>
+        <td>Wed</td>
+        <td><input type="text" class="timetable-input" data-day="Wed" data-period="1" /></td>
+        <td><input type="text" class="timetable-input" data-day="Wed" data-period="2" /></td>
+        <td><input type="text" class="timetable-input" data-day="Wed" data-period="3" /></td>
+        <td><input type="text" class="timetable-input" data-day="Wed" data-period="4" /></td>
+        <td><input type="text" class="timetable-input" data-day="Wed" data-period="5" /></td>
+      </tr>
+      <tr>
+        <td>Thu</td>
+        <td><input type="text" class="timetable-input" data-day="Thu" data-period="1" /></td>
+        <td><input type="text" class="timetable-input" data-day="Thu" data-period="2" /></td>
+        <td><input type="text" class="timetable-input" data-day="Thu" data-period="3" /></td>
+        <td><input type="text" class="timetable-input" data-day="Thu" data-period="4" /></td>
+        <td><input type="text" class="timetable-input" data-day="Thu" data-period="5" /></td>
+      </tr>
+      <tr>
+        <td>Fri</td>
+        <td><input type="text" class="timetable-input" data-day="Fri" data-period="1" /></td>
+        <td><input type="text" class="timetable-input" data-day="Fri" data-period="2" /></td>
+        <td><input type="text" class="timetable-input" data-day="Fri" data-period="3" /></td>
+        <td><input type="text" class="timetable-input" data-day="Fri" data-period="4" /></td>
+        <td><input type="text" class="timetable-input" data-day="Fri" data-period="5" /></td>
+      </tr>
+    </tbody>
+  </table>
+  <button id="save-timetable-btn">Save Timetable</button>
+</div>
 
-  <section id="timer" class="hidden">
-    <h2>Period Timer & Study Section</h2>
-    <div id="period-name">No active period</div>
-    <div id="timer-display">00:00</div>
-    <button id="start-timer-btn">Start Period</button>
-    <button id="stop-timer-btn" disabled>Stop Period</button>
-
-    <div id="study-section" class="hidden">
-      <h3>Study Section: <span id="study-subject"></span></h3>
-      <p>Here you can study material related to the current period subject.</p>
-      <!-- Add actual study materials here -->
-    </div>
-  </section>
-
-  <section id="ai-chat" class="hidden">
-    <h2>AI Chat Assistant (Coming soon)</h2>
-    <div class="placeholder">AI Chat integration is a complex task. You can integrate OpenAI or other services here.</div>
-  </section>
-
-  <section id="user-chat" class="hidden">
-    <h2>User-to-User Chat (Coming soon)</h2>
-    <div class="placeholder">Realtime user chat with Firebase or Socket.IO will go here.</div>
-  </section>
-
-  <section id="video-call" class="hidden">
-    <h2>Video Calls (Coming soon)</h2>
-    <div class="placeholder">Video calls with WebRTC or 3rd party APIs like Daily or Twilio here.</div>
-  </section>
-
-  <section id="timetable-edit" class="hidden">
-    <h2>Edit Your Timetable</h2>
-    <form id="timetable-form">
-      <table>
-        <thead>
-          <tr>
-            <th>Period</th>
-            <th>Monday</th><th>Tuesday</th><th>Wednesday</th><th>Thursday</th><th>Friday</th>
-          </tr>
-        </thead>
-        <tbody>
-          <!-- 5 periods -->
-          <tr>
-            <td>Period 1</td>
-            <td><input class="timetable-input" type="text" data-day="mon" data-period="1" /></td>
-            <td><input class="timetable-input" type="text" data-day="tue" data-period="1" /></td>
-            <td><input class="timetable-input" type="text" data-day="wed" data-period="1" /></td>
-            <td><input class="timetable-input" type="text" data-day="thu" data-period="1" /></td>
-            <td><input class="timetable-input" type="text" data-day="fri" data-period="1" /></td>
-          </tr>
-          <tr>
-            <td>Period 2</td>
-            <td><input class="timetable-input" type="text" data-day="mon" data-period="2" /></td>
-            <td><input class="timetable-input" type="text" data-day="tue" data-period="2" /></td>
-            <td><input class="timetable-input" type="text" data-day="wed" data-period="2" /></td>
-            <td><input class="timetable-input" type="text" data-day="thu" data-period="2" /></td>
-            <td><input class="timetable-input" type="text" data-day="fri" data-period="2" /></td>
-          </tr>
-          <tr>
-            <td>Period 3</td>
-            <td><input class="timetable-input" type="text" data-day="mon" data-period="3" /></td>
-            <td><input class="timetable-input" type="text" data-day="tue" data-period="3" /></td>
-            <td><input class="timetable-input" type="text" data-day="wed" data-period="3" /></td>
-            <td><input class="timetable-input" type="text" data-day="thu" data-period="3" /></td>
-            <td><input class="timetable-input" type="text" data-day="fri" data-period="3" /></td>
-          </tr>
-          <tr>
-            <td>Period 4</td>
-            <td><input class="timetable-input" type="text" data-day="mon" data-period="4" /></td>
-            <td><input class="timetable-input" type="text" data-day="tue" data-period="4" /></td>
-            <td><input class="timetable-input" type="text" data-day="wed" data-period="4" /></td>
-            <td><input class="timetable-input" type="text" data-day="thu" data-period="4" /></td>
-            <td><input class="timetable-input" type="text" data-day="fri" data-period="4" /></td>
-          </tr>
-          <tr>
-            <td>Period 5</td>
-            <td><input class="timetable-input" type="text" data-day="mon" data-period="5" /></td>
-            <td><input class="timetable-input" type="text" data-day="tue" data-period="5" /></td>
-            <td><input class="timetable-input" type="text" data-day="wed" data-period="5" /></td>
-            <td><input class="timetable-input" type="text" data-day="thu" data-period="5" /></td>
-            <td><input class="timetable-input" type="text" data-day="fri" data-period="5" /></td>
-          </tr>
-        </tbody>
-      </table>
-      <button type="submit" style="margin-top:15px; padding:10px 20px; background:#0057b7; color:white; border:none; border-radius:4px; cursor:pointer;">Save Timetable</button>
-    </form>
-  </section>
-</main>
-
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
   // Your Firebase config
@@ -225,108 +91,68 @@
     measurementId: "G-7HRKXL1EPS"
   };
 
+  // Initialize Firebase
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
   const db = firebase.database();
 
-  // UI references
-  const authSection = document.getElementById('auth-section');
   const emailInput = document.getElementById('email');
   const passwordInput = document.getElementById('password');
-  const authBtn = document.getElementById('auth-btn');
-  const toggleAuth = document.getElementById('toggle-auth');
-  const authTitle = document.getElementById('auth-title');
-  const authError = document.getElementById('auth-error');
+  const signupBtn = document.getElementById('signup-btn');
+  const loginBtn = document.getElementById('login-btn');
   const logoutBtn = document.getElementById('logout-btn');
+  const timetableContainer = document.getElementById('timetable-container');
+  const saveTimetableBtn = document.getElementById('save-timetable-btn');
 
-  const tabs = document.querySelectorAll('.tab-btn');
-  const sections = {
-    search: document.getElementById('search'),
-    timer: document.getElementById('timer'),
-    'ai-chat': document.getElementById('ai-chat'),
-    'user-chat': document.getElementById('user-chat'),
-    'video-call': document.getElementById('video-call'),
-    'timetable-edit': document.getElementById('timetable-edit')
+  signupBtn.onclick = () => {
+    const email = emailInput.value.trim();
+    const pass = passwordInput.value.trim();
+    if (!email || !pass) return alert('Email and password required');
+    auth.createUserWithEmailAndPassword(email, pass)
+      .then(() => alert('Signed up!'))
+      .catch(e => alert('Error: ' + e.message));
   };
 
-  let isLogin = true; // toggle login/signup
-
-  // Toggle login/signup form
-  toggleAuth.addEventListener('click', () => {
-    isLogin = !isLogin;
-    authTitle.textContent = isLogin ? 'Login' : 'Sign Up';
-    authBtn.textContent = isLogin ? 'Login' : 'Sign Up';
-    toggleAuth.textContent = isLogin ? "Don't have an account? Sign up" : "Already have an account? Login";
-    authError.textContent = '';
-  });
-
-  // Auth button click
-  authBtn.addEventListener('click', () => {
+  loginBtn.onclick = () => {
     const email = emailInput.value.trim();
-    const password = passwordInput.value.trim();
-    if (!email || !password) {
-      authError.textContent = 'Email and password required.';
-      return;
-    }
-    authError.textContent = '';
-    if (isLogin) {
-      auth.signInWithEmailAndPassword(email, password)
-        .catch(e => authError.textContent = e.message);
-    } else {
-      auth.createUserWithEmailAndPassword(email, password)
-        .catch(e => authError.textContent = e.message);
-    }
-  });
+    const pass = passwordInput.value.trim();
+    if (!email || !pass) return alert('Email and password required');
+    auth.signInWithEmailAndPassword(email, pass)
+      .catch(e => alert('Error: ' + e.message));
+  };
 
-  // Auth state changed
+  logoutBtn.onclick = () => {
+    auth.signOut();
+  };
+
   auth.onAuthStateChanged(user => {
     if (user) {
-      // User logged in
-      authSection.style.display = 'none';
+      emailInput.style.display = 'none';
+      passwordInput.style.display = 'none';
+      signupBtn.style.display = 'none';
+      loginBtn.style.display = 'none';
       logoutBtn.style.display = 'inline-block';
-      showTab('search'); // default tab on login
+      timetableContainer.style.display = 'block';
       loadTimetable();
     } else {
-      // User logged out
-      authSection.style.display = 'block';
+      emailInput.style.display = 'inline-block';
+      passwordInput.style.display = 'inline-block';
+      signupBtn.style.display = 'inline-block';
+      loginBtn.style.display = 'inline-block';
       logoutBtn.style.display = 'none';
-      hideAllSections();
-      emailInput.value = '';
-      passwordInput.value = '';
+      timetableContainer.style.display = 'none';
+      clearTimetableInputs();
     }
   });
 
-  logoutBtn.addEventListener('click', () => {
-    auth.signOut();
-  });
-
-  // Tab navigation
-  tabs.forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (!auth.currentUser) return;
-      showTab(btn.dataset.tab);
-    });
-  });
-
-  function hideAllSections() {
-    Object.values(sections).forEach(sec => sec.classList.add('hidden'));
-    tabs.forEach(btn => btn.classList.remove('active'));
-  }
-  function showTab(tabName) {
-    hideAllSections();
-    sections[tabName].classList.remove('hidden');
-    document.querySelector(`.tab-btn[data-tab="${tabName}"]`).classList.add('active');
-  }
-
-  // Timetable saving and loading
-  const timetableForm = document.getElementById('timetable-form');
-  timetableForm.addEventListener('submit', e => {
-    e.preventDefault();
+  saveTimetableBtn.onclick = () => {
     saveTimetable();
-  });
+  };
 
   function saveTimetable() {
-    const userId = auth.currentUser.uid;
+    const user = auth.currentUser;
+    if (!user) return alert('Not logged in');
+
     const timetableData = {};
     document.querySelectorAll('.timetable-input').forEach(input => {
       const day = input.dataset.day;
@@ -334,34 +160,38 @@
       if (!timetableData[day]) timetableData[day] = {};
       timetableData[day][period] = input.value.trim();
     });
-    db.ref(`timetables/${userId}`).set(timetableData)
+
+    db.ref('timetables/' + user.uid).set(timetableData)
       .then(() => alert('Timetable saved!'))
-      .catch(err => alert('Error saving timetable: ' + err.message));
+      .catch(e => alert('Error saving timetable: ' + e.message));
   }
 
   function loadTimetable() {
-    const userId = auth.currentUser.uid;
-    db.ref(`timetables/${userId}`).get().then(snapshot => {
-      if (!snapshot.exists()) return;
-      const data = snapshot.val();
-      document.querySelectorAll('.timetable
-function loadTimetable() {
-  const userId = auth.currentUser.uid;
-  db.ref(`timetables/${userId}`).get().then(snapshot => {
-    if (!snapshot.exists()) return;
-    const data = snapshot.val();
+    const user = auth.currentUser;
+    if (!user) return;
 
-    document.querySelectorAll('.timetable-input').forEach(input => {
-      const day = input.dataset.day;
-      const period = input.dataset.period;
+    db.ref('timetables/' + user.uid).get()
+      .then(snapshot => {
+        if (!snapshot.exists()) {
+          clearTimetableInputs();
+          return;
+        }
+        const data = snapshot.val();
+        document.querySelectorAll('.timetable-input').forEach(input => {
+          const day = input.dataset.day;
+          const period = input.dataset.period;
+          input.value = data[day] && data[day][period] ? data[day][period] : '';
+        });
+      })
+      .catch(e => {
+        alert('Error loading timetable: ' + e.message);
+      });
+  }
 
-      if (data[day] && data[day][period]) {
-        input.value = data[day][period];
-      } else {
-        input.value = '';  // Clear input if no saved data
-      }
-    });
-  }).catch(error => {
-    console.error('Error loading timetable:', error);
-  });
-}
+  function clearTimetableInputs() {
+    document.querySelectorAll('.timetable-input').forEach(input => input.value = '');
+  }
+</script>
+
+</body>
+</html>
